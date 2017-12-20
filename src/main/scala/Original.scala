@@ -5,26 +5,27 @@ import scala.util.Success
 
 object Original {
   val right =
-    DAG.empty[Int]
-      .add(0, Set()).add(0, Set(0)).add(0, Set(1)).add(0, Set(2))
-      .add(0, Set()).add(0, Set(4)).add(0, Set(5)).add(0, Set(6))
-      .add(0, Set()).add(0, Set(8)).add(0, Set(9)).add(0, Set(10))
-      .add(0, Set()).add(0, Set(12)).add(0, Set(13)).add(0, Set(14))
+    DAG.empty
+      .add(Set()).add(Set(0)).add(Set(1)).add(Set(2))
+      .add(Set()).add(Set(4)).add(Set(5)).add(Set(6))
+      .add(Set()).add(Set(8)).add(Set(9)).add(Set(10))
+      .add(Set()).add(Set(12)).add(Set(13)).add(Set(14))
 
   val left = right.inverted
 
   val down =
-    DAG.empty[Int]
-      .add(0, Set()).add(0, Set()).add(0, Set()).add(0, Set())
-      .add(0, Set(0)).add(0, Set(1)).add(0, Set(2)).add(0, Set(3))
-      .add(0, Set(4)).add(0, Set(5)).add(0, Set(6)).add(0, Set(7))
-      .add(0, Set(8)).add(0, Set(9)).add(0, Set(10)).add(0, Set(11))
+    DAG.empty
+      .add(Set()).add(Set()).add(Set()).add(Set())
+      .add(Set(0)).add(Set(1)).add(Set(2)).add(Set(3))
+      .add(Set(4)).add(Set(5)).add(Set(6)).add(Set(7))
+      .add(Set(8)).add(Set(9)).add(Set(10)).add(Set(11))
 
   val up = down.inverted
 
   val zero =
     Graph.empty[Int]
-      .update(0, right).update(1, left).update(2, down).update(3, up)
+      .update(IndexedSeq.fill(16)(0))
+      .add(0, right).add(1, left).add(2, down).add(3, up)
 
   def directions(dirs: Set[Int]): String =
     Map(0 -> "right", 1 -> "left", 2 -> "down", 3 -> "up")
@@ -59,11 +60,11 @@ object Original {
     Try(StdIn.readLine(s"Direction (${directions(dirs)}) > ").toInt)
       .filter(dirs.contains)
 
-  def pickEmpty(es: Set[Int]): Try[Int] =
+  def pickEmpty(es: IndexedSeq[Int]): Try[Int] =
     Try(Random.shuffle(es).head)
 
-  def empties(graph: Graph[Int]): Set[Int] =
-    graph.values.zipWithIndex.filter(_._1 == 0).map(_._2).toSet
+  def empties(graph: Graph[Int]): IndexedSeq[Int] =
+    graph.values.zipWithIndex.filter(_._1 == 0).map(_._2)
 
   def points(prev: Graph[Int], cur: Graph[Int]): Int =
     cur.values.diff(prev.values).sum +

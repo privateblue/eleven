@@ -1,15 +1,8 @@
 object DAG {
-  def empty[V] = DAG(IndexedSeq.empty[V], Set.empty)
+  def empty = DAG(0, Set.empty)
 }
 
-case class DAG[V](values: IndexedSeq[V], edges: Set[(Int, Int)]) {
-  def add(value: V, neighbours: Set[Int] = Set.empty): DAG[V] = {
-    val vs = values :+ value
-    val i = vs.size - 1
-    val es = edges ++ neighbours.filter(_ < i).map(_ -> i)
-    DAG(vs, es)
-  }
-
+case class DAG(next: Int, edges: Set[(Int, Int)]) {
   val vertices: Set[Int] = edges.map(_._1) ++ edges.map(_._2)
 
   val sourceMap: Map[Int, Set[(Int, Int)]] = edges.groupBy(_._1)
@@ -20,13 +13,13 @@ case class DAG[V](values: IndexedSeq[V], edges: Set[(Int, Int)]) {
 
   val ends: Set[Int] = targetMap.keySet diff sourceMap.keySet
 
-  def inverted = DAG(values, edges.map(e => (e._2, e._1)))
+  def add(neighbours: Set[Int] = Set.empty): DAG = {
+    val es = edges ++ neighbours.filter(_ < next).map(_ -> next)
+    DAG(next + 1, es)
+  }
 
-  def at(index: Int): V =
-    values(index)
-
-  def set(index: Int, value: V): DAG[V] =
-    DAG(values.updated(index, value), edges)
+  def inverted: DAG =
+    DAG(next, edges.map(e => (e._2, e._1)))
 
   def from(index: Int): Set[Int] =
     targetMap.get(index).getOrElse(Set.empty).map(_._1)
@@ -34,22 +27,18 @@ case class DAG[V](values: IndexedSeq[V], edges: Set[(Int, Int)]) {
   def to(index: Int): Set[Int] =
     sourceMap.get(index).getOrElse(Set.empty).map(_._2)
 
-  def before(root: Int): DAG[V] = {
+  def before(root: Int): DAG = {
     def before0(r: Int): Set[(Int, Int)] =
       targetMap.get(r).getOrElse(Set.empty) ++ from(r).flatMap(before0)
-    DAG(values.take(root + 1), before0(root))
+    DAG(root + 1, before0(root))
   }
 
-  def beforeTree(root: Int): Tree[V] =
-    Tree(root, at(root), from(root).map(beforeTree))
-
-  def after(root: Int): DAG[V] = {
+  def after(root: Int): DAG = {
     def after0(r: Int): Set[(Int, Int)] =
       sourceMap.get(r).getOrElse(Set.empty) ++ to(r).flatMap(after0)
-    DAG(values, after0(root))
+    DAG(next, after0(root))
   }
-}
 
-case class Tree[V](index: Int, value: V, children: Set[Tree[V]]) {
-  def prepend(i: Int, v: V): Tree[V] = Tree(i, v, Set(this))
+  def cut(index: Int): DAG =
+    DAG(index + 1, edges.filterNot(e => e._1 > index || e._2 > index))
 }

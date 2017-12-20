@@ -3,13 +3,14 @@ object Graph {
 }
 
 case class Graph[V](values: IndexedSeq[V], edges: Map[Int, Set[(Int, Int)]]) {
-  def update(dir: Int, dag: DAG[V]): Graph[V] = Graph(
-    values = dag.values ++ values.drop(dag.values.size),
-    edges = edges + (dir -> dag.edges)
-  )
+  def add(dir: Int, dag: DAG): Graph[V] =
+    Graph(values, edges + (dir -> dag.cut(values.size - 1).edges))
 
-  def direction(dir: Int): DAG[V] =
-    DAG(values, edges(dir))
+  def update(vs: IndexedSeq[V]): Graph[V] =
+    Graph(vs ++ values.drop(vs.size), edges)
+
+  def direction(dir: Int): DAG =
+    DAG(values.size, edges(dir))
 
   def at(index: Int): V =
     values(index)

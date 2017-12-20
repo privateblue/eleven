@@ -9,16 +9,23 @@ object WriteBackReducer {
 
   def reduce(dir: Int, graph: Graph[Int]): Graph[Int] = {
     val dag = graph.direction(dir)
-    def reduce0(i: Int, out: Out, path: Vector[Int], focus: Int): Out = {
-      val mergeb = nextValues(dag, i).size > 1
+    def valuesBefore(i: Int): Set[Int] =
+      dag.from(i).map {
+        case c if graph.at(c) == 0 =>
+          val cvs = valuesBefore(c)
+          if (cvs.size == 1) cvs.head else 0
+        case c => graph.at(c)
+      }.filterNot(_ == 0)
+    def reduce0(i: Int, out: Out, path: IndexedSeq[Int], focus: Int): Out = {
+      val mergeb = valuesBefore(i).size > 1
       val splitb =
         dag.to(i)
           .filterNot(path.contains)
-          .exists(c => nextValues(dag, c).size > 1 || dag.ends.contains(c))
+          .exists(c => valuesBefore(c).size > 1 || dag.ends.contains(c))
       val p = path :+ i
       val f = if (splitb) p.size - 1 else focus
       val focused = p(f)
-      val v = dag.at(i)
+      val v = graph.at(i)
       val fv = get(out, focused)
       if (v == 0) {
         val cs = dag.from(i).map(c => reduce0(c, out, p, if (mergeb) p.size else f))
@@ -38,19 +45,12 @@ object WriteBackReducer {
         resolve(updated, cs)
       }
     }
-    val cs = dag.ends.map { r => reduce0(r, empty, Vector.empty, 0) }
-    val blank = DAG(IndexedSeq.fill(dag.values.size)(0), dag.edges)
-    val updated = resolve(empty, cs).foldLeft(blank)((d, vs) => d.set(vs._1, vs._2))
-    graph.update(dir, updated)
+    val reduced = dag.ends.map { r => reduce0(r, empty, Vector.empty, 0) }
+    val resolved = resolve(empty, reduced)
+    val blank = IndexedSeq.fill(graph.values.size)(0)
+    val updated = resolved.foldLeft(blank)((vs, v) => vs.updated(v._1, v._2))
+    graph.update(updated)
   }
-
-  def nextValues(dag: DAG[Int], i: Int): Set[Int] =
-    dag.from(i).map {
-      case c if dag.at(c) == 0 =>
-        val cvs = nextValues(dag, c)
-        if (cvs.size == 1) cvs.head else 0
-      case c => dag.at(c)
-    }.filterNot(_ == 0)
 
   def resolve(parent: Out, cs: Set[Out]): Out = cs.foldLeft(parent)(add)
 }
