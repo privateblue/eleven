@@ -25,9 +25,9 @@ object Original {
   val zero =
     Graph.empty[Int]
       .update(IndexedSeq.fill(16)(0))
-      .add(0, right).add(1, left).add(2, down).add(3, up)
+      .add(right).add(left).add(down).add(up)
 
-  def directions(dirs: Set[Int]): String =
+  def directions(dirs: IndexedSeq[Int]): String =
     Map(0 -> "right", 1 -> "left", 2 -> "down", 3 -> "up")
       .filterKeys(dirs.contains)
       .map { case (d, desc) => s"$d - $desc" }
@@ -51,12 +51,10 @@ object Original {
     }
   }
 
-  def reducibles(graph: Graph[Int]): Set[Int] =
-    graph.edges.keySet.collect {
-      case d if WriteBackReducer.reduce(d, graph).values != graph.values => d
-    }
+  def reducibles(graph: Graph[Int]): IndexedSeq[Int] =
+    0 until graph.edges.size filter (WriteBackReducer.reduce(_, graph).values != graph.values)
 
-  def pickDirection(dirs: Set[Int]): Try[Int] =
+  def pickDirection(dirs: IndexedSeq[Int]): Try[Int] =
     Try(StdIn.readLine(s"Direction (${directions(dirs)}) > ").toInt)
       .filter(dirs.contains)
 

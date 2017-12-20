@@ -1,10 +1,10 @@
 object Graph {
-  def empty[V] = Graph(IndexedSeq.empty[V], Map.empty)
+  def empty[V] = Graph(IndexedSeq.empty[V], IndexedSeq.empty)
 }
 
-case class Graph[V](values: IndexedSeq[V], edges: Map[Int, Set[(Int, Int)]]) {
-  def add(dir: Int, dag: DAG): Graph[V] =
-    Graph(values, edges + (dir -> dag.cut(values.size - 1).edges))
+case class Graph[V](values: IndexedSeq[V], edges: IndexedSeq[Set[(Int, Int)]]) {
+  def add(dag: DAG): Graph[V] =
+    Graph(values, edges :+ dag.cut(values.size - 1).edges)
 
   def update(vs: IndexedSeq[V]): Graph[V] =
     Graph(vs ++ values.drop(vs.size), edges)
