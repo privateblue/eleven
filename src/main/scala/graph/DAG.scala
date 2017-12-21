@@ -1,3 +1,5 @@
+package graph
+
 object DAG {
   def empty = DAG(Index(0), Set.empty)
 }

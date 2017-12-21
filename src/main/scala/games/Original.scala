@@ -1,3 +1,8 @@
+package games
+
+import graph._
+import engine._
+
 import scala.io.StdIn
 import scala.util.Random
 import scala.util.Try

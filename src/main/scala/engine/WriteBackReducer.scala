@@ -1,3 +1,7 @@
+package engine
+
+import graph._
+
 object WriteBackReducer {
   type Out = Map[Index, Value]
 
@@ -47,7 +51,7 @@ object WriteBackReducer {
     }
     val reduced = dag.ends.map { r => reduce0(r, empty, Vector.empty, 0) }
     val resolved = resolve(empty, reduced)
-    val blank = Graph(IndexedSeq.fill(graph.values.size)(Value.zero), graph.edges)
+    val blank = graph.fill(Value.zero)
     resolved.foldLeft(blank)((g, v) => g.set(v._1, v._2))
   }
 
