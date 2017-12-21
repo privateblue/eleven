@@ -1,44 +1,44 @@
 object DAG {
-  def empty = DAG(0, Set.empty)
+  def empty = DAG(Index(0), Set.empty)
 }
 
-case class DAG(next: Int, edges: Set[(Int, Int)]) {
-  val vertices: Set[Int] = edges.map(_._1) ++ edges.map(_._2)
+case class DAG(next: Index, edges: Set[(Index, Index)]) {
+  val vertices: Set[Index] = edges.map(_._1) ++ edges.map(_._2)
 
-  val sourceMap: Map[Int, Set[(Int, Int)]] = edges.groupBy(_._1)
+  val sourceMap: Map[Index, Set[(Index, Index)]] = edges.groupBy(_._1)
 
-  val targetMap: Map[Int, Set[(Int, Int)]] = edges.groupBy(_._2)
+  val targetMap: Map[Index, Set[(Index, Index)]] = edges.groupBy(_._2)
 
-  val starts: Set[Int] = sourceMap.keySet diff targetMap.keySet
+  val starts: Set[Index] = sourceMap.keySet diff targetMap.keySet
 
-  val ends: Set[Int] = targetMap.keySet diff sourceMap.keySet
+  val ends: Set[Index] = targetMap.keySet diff sourceMap.keySet
 
   def add(neighbours: Set[Int] = Set.empty): DAG = {
-    val es = edges ++ neighbours.filter(_ < next).map(_ -> next)
-    DAG(next + 1, es)
+    val es = edges ++ neighbours.filter(_ < next.i).map(Index(_) -> next)
+    DAG(Index(next.i + 1), es)
   }
 
   def inverted: DAG =
     DAG(next, edges.map(e => (e._2, e._1)))
 
-  def from(index: Int): Set[Int] =
+  def from(index: Index): Set[Index] =
     targetMap.get(index).getOrElse(Set.empty).map(_._1)
 
-  def to(index: Int): Set[Int] =
+  def to(index: Index): Set[Index] =
     sourceMap.get(index).getOrElse(Set.empty).map(_._2)
 
-  def before(root: Int): DAG = {
-    def before0(r: Int): Set[(Int, Int)] =
+  def before(root: Index): DAG = {
+    def before0(r: Index): Set[(Index, Index)] =
       targetMap.get(r).getOrElse(Set.empty) ++ from(r).flatMap(before0)
-    DAG(root + 1, before0(root))
+    DAG(Index(root.i + 1), before0(root))
   }
 
-  def after(root: Int): DAG = {
-    def after0(r: Int): Set[(Int, Int)] =
+  def after(root: Index): DAG = {
+    def after0(r: Index): Set[(Index, Index)] =
       sourceMap.get(r).getOrElse(Set.empty) ++ to(r).flatMap(after0)
     DAG(next, after0(root))
   }
 
-  def cut(index: Int): DAG =
-    DAG(index + 1, edges.filterNot(e => e._1 > index || e._2 > index))
+  def cut(index: Index): DAG =
+    DAG(Index(index.i + 1), edges.filterNot(e => e._1.i > index.i || e._2.i > index.i))
 }

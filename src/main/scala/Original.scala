@@ -23,53 +23,54 @@ object Original {
   val up = down.inverted
 
   val zero =
-    Graph.empty[Int]
-      .update(IndexedSeq.fill(16)(0))
+    Graph.empty[Value]
+      .update(IndexedSeq.fill(16)(Value.zero))
       .add(right).add(left).add(down).add(up)
 
-  def directions(dirs: IndexedSeq[Int]): String =
+  def directions(dirs: IndexedSeq[Direction]): String =
     Map(0 -> "right", 1 -> "left", 2 -> "down", 3 -> "up")
-      .filterKeys(dirs.contains)
+      .filterKeys(dirs.map(_.d).contains)
       .map { case (d, desc) => s"$d - $desc" }
       .mkString(", ")
 
   def main(args: Array[String]): Unit =
     move(zero, List.empty, 0).fold(_ => (), _ => ())
 
-  def move(graph: Graph[Int], history: List[(Int, Int)], ps: Int): Try[Unit] = {
+  def move(graph: Graph[Value], history: List[(Index, Direction)], ps: Int): Try[Unit] = {
     println(s"\n${history.size}. move:")
     for {
       e <- pickEmpty(empties(graph))
-      filled = graph.set(e, 1)
+      filled = graph.set(e, Value.zero.next)
       _ = println(board(filled))
       dir <- pickDirection(reducibles(filled))
     } yield {
       val reduced = WriteBackReducer.reduce(dir, filled)
-      val p = points(filled, reduced)
-      println(s"points: $ps + $p")
+      val p = score(filled, reduced)
+      println(s"score: $ps + $p")
       move(reduced, (e, dir) :: history, ps + p)
     }
   }
 
-  def reducibles(graph: Graph[Int]): IndexedSeq[Int] =
-    0 until graph.edges.size filter (WriteBackReducer.reduce(_, graph).values != graph.values)
+  def reducibles(graph: Graph[Value]): IndexedSeq[Direction] =
+    graph.directions.filter(WriteBackReducer.reduce(_, graph).values != graph.values)
 
-  def pickDirection(dirs: IndexedSeq[Int]): Try[Int] =
+  def pickDirection(dirs: IndexedSeq[Direction]): Try[Direction] =
     Try(StdIn.readLine(s"Direction (${directions(dirs)}) > ").toInt)
+      .map(Direction.apply)
       .filter(dirs.contains)
 
-  def pickEmpty(es: IndexedSeq[Int]): Try[Int] =
+  def pickEmpty(es: IndexedSeq[Index]): Try[Index] =
     Try(Random.shuffle(es).head)
 
-  def empties(graph: Graph[Int]): IndexedSeq[Int] =
-    graph.values.zipWithIndex.filter(_._1 == 0).map(_._2)
+  def empties(graph: Graph[Value]): IndexedSeq[Index] =
+    graph.indices.filter(graph.at(_) == Value.zero)
 
-  def points(prev: Graph[Int], cur: Graph[Int]): Int =
-    cur.values.diff(prev.values).sum +
+  def score(prev: Graph[Value], cur: Graph[Value]): Int =
+    cur.values.diff(prev.values).map(_.v).sum +
       prev.values.diff(cur.values)
-        .diff(cur.values.diff(prev.values).flatMap(v => IndexedSeq(v - 1, v - 1)))
-        .sum
+        .diff(cur.values.diff(prev.values).flatMap(v => IndexedSeq(v.prev, v.prev)))
+        .map(_.v).sum
 
-  def board(graph: Graph[Int]): String =
-    graph.values.sliding(4, 4).map(_.mkString(" ")).mkString("\n")
+  def board(graph: Graph[Value]): String =
+    graph.values.map(_.v).sliding(4, 4).map(_.mkString(" ")).mkString("\n")
 }
