@@ -12,6 +12,7 @@ object Value {
 }
 
 case class Value(v: Int, c: Option[Color]) {
+  val eleven = v == 11
   def next = Value(v + 1, c)
   def prev = Value(v - 1, c)
   def paint(nc: Color) = Value(v, Some(nc))
