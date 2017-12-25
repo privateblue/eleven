@@ -61,11 +61,11 @@ object ToJs {
   implicit val gameToJs = new ToJs[Game] {
     def toJs(game: Game) = game match {
       case Continued(graph, history, scores) =>
-        js.Dynamic.literal(state = "continued", graph = to(graph), scores = to(scores))
+        js.Dynamic.literal(state = "continued", graph = to(graph), move = history.size, scores = to(scores))
       case NoMoreMoves(graph, history, scores) =>
-        js.Dynamic.literal(state = "nomoremoves", graph = to(graph), scores = to(scores))
+        js.Dynamic.literal(state = "nomoremoves", graph = to(graph), move = history.size, scores = to(scores))
       case Eleven(winner, graph, history, scores) =>
-        js.Dynamic.literal(state = "eleven", winner = to(winner), graph = to(graph), scores = to(scores))
+        js.Dynamic.literal(state = "eleven", winner = to(winner), graph = to(graph), move = history.size, scores = to(scores))
     }
   }
 }

@@ -15,7 +15,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 object OriginalConsole {
   val colors = IndexedSeq(Console.RED, Console.GREEN, Console.YELLOW, Console.MAGENTA, Console.BLUE, Console.CYAN)
 
-  val players = 1
+  val players = 2
 
   def main(args: Array[String]): Unit = {
     val started = Game.start(Graphs.original, players)

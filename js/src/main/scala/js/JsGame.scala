@@ -9,6 +9,7 @@ import scala.concurrent.Future
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 import scala.scalajs.js
 import scala.scalajs.js.annotation._
+import scala.scalajs.js.JSConverters._
 
 @JSExportTopLevel("Game")
 object JsGame {
@@ -33,6 +34,18 @@ object JsGame {
   def graphToJs(graph: Graph[Value]) = ToJs.to(graph)
 
   @JSExport
+  def emptiesToJs(es: IndexedSeq[Index]) = ToJs.to(es)
+
+  @JSExport
+  def directionsToJs(dirs: IndexedSeq[Direction]) = ToJs.to(dirs)
+
+  @JSExport
+  def scoresToJs(scores: IndexedSeq[Score]) = ToJs.to(scores)
+
+  @JSExport
+  def nextToJs(next: Future[Game]) = next.toJSPromise
+
+  @JSExport
   def indexOf(i: Int) = Index(i)
 
   @JSExport
@@ -45,4 +58,8 @@ object JsGame {
   @JSExport
   def directionPickerOf(picker: js.Function2[Graph[Value], IndexedSeq[Direction], js.Promise[Index]]) =
     { (g: Graph[Value], ds:  IndexedSeq[Direction]) => picker(g, ds).toFuture }
+
+  @JSExport
+  def resultHandlerOf(picker: js.Function2[Graph[Value], IndexedSeq[Score], js.Promise[Unit]]) =
+    { (g: Graph[Value], ss:  IndexedSeq[Score]) => picker(g, ss).toFuture }
 }
