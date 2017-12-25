@@ -2,6 +2,9 @@ package engine
 
 import graph._
 
+import scala.concurrent.Future
+import scala.concurrent.ExecutionContext
+
 sealed trait Game
 
 case class Continued(
@@ -29,30 +32,35 @@ object Game {
 
   def move(
     state: Continued,
-    emptyPicker: (IndexedSeq[Index]) => Index,
-    directionPicker: (Graph[Value], IndexedSeq[Direction]) => Direction,
-    resultHandler: (Graph[Value], IndexedSeq[Score]) => Unit
-  ): Game = {
+    emptyPicker: (IndexedSeq[Index]) => Future[Index],
+    directionPicker: (Graph[Value], IndexedSeq[Direction]) => Future[Direction],
+    resultHandler: (Graph[Value], IndexedSeq[Score]) => Future[Unit]
+  )(implicit ec: ExecutionContext): Future[Game] = {
     val next = Player(state.history.size % state.scores.size)
     val color = Color(next.p)
     val starter = Value.empty.paint(color).next
     val es = empties(state.graph)
-    val e = if (!es.isEmpty) Some(emptyPicker(es)) else None
-    val put = e.map(state.graph.set(_, starter)).getOrElse(state.graph)
-    val reds = reducibles(color, put)
-    val dir = if (!reds.isEmpty) Some(directionPicker(put, reds)) else None
-    val reduced = dir.map(WriteBackReducer.reduce(color, _, put)).getOrElse(put)
-    val score = scored(put, reduced)
-    val added = updatedScores(state.scores, next, score)
-    resultHandler(reduced, added)
-    val elevs = elevens(reduced)
-    val moves = 0 until state.scores.size flatMap (c => reducibles(Color(c), reduced))
-    if (elevs.size > 0)
-      Eleven(elevs.head, reduced, (e, dir) :: state.history, added)
-    else if (empties(reduced).size == 0 && moves.size == 0)
-      NoMoreMoves(reduced, (e, dir) :: state.history, added)
-    else
-      Continued(reduced, (e, dir) :: state.history, added)
+    for {
+      e <- if (!es.isEmpty) emptyPicker(es).map(Option.apply)
+           else Future.successful(None)
+      put = e.map(state.graph.set(_, starter)).getOrElse(state.graph)
+      reds = reducibles(color, put)
+      dir <- if (!reds.isEmpty) directionPicker(put, reds).map(Option.apply)
+             else Future.successful(None)
+      reduced = dir.map(WriteBackReducer.reduce(color, _, put)).getOrElse(put)
+      score = scored(put, reduced)
+      added = updatedScores(state.scores, next, score)
+      _ <- resultHandler(reduced, added)
+      elevs = elevens(reduced)
+      moves = 0 until state.scores.size flatMap (c => reducibles(Color(c), reduced))
+    } yield {
+      if (elevs.size > 0)
+        Eleven(elevs.head, reduced, (e, dir) :: state.history, added)
+      else if (empties(reduced).size == 0 && moves.size == 0)
+        NoMoreMoves(reduced, (e, dir) :: state.history, added)
+      else
+        Continued(reduced, (e, dir) :: state.history, added)
+    }
   }
 
   def empties(graph: Graph[Value]): IndexedSeq[Index] =

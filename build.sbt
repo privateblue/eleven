@@ -6,7 +6,19 @@ scalaVersion := "2.12.4"
 
 scalacOptions += "-Ypartial-unification"
 
-libraryDependencies ++= Seq(
-  "org.typelevel" %% "cats-core" % "1.0.0-RC1",
-  "org.typelevel" %% "dogs-core" % "0.6.9"
-)
+lazy val root = project.in(file(".")).aggregate(appJS, appJVM)
+
+lazy val app = crossProject.in(file("."))
+  .settings(
+    libraryDependencies += "org.typelevel" %%% "cats-core" % "1.0.0-RC1"
+  ).jsSettings(
+    webpackBundlingMode := BundlingMode.LibraryOnly(),
+    emitSourceMaps := false
+  ).jsConfigure(
+    _ enablePlugins ScalaJSBundlerPlugin
+  ).jvmSettings(
+  )
+
+lazy val appJS = app.js
+
+lazy val appJVM = app.jvm
