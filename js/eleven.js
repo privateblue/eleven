@@ -1,4 +1,4 @@
-var players = 4;
+var players = 1;
 
 var colorMap = ['#92140C', '#CF5C36', '#353238', '#C1B4AE', '#5C415D'];
 var directionKeyMap = [39, 37, 40, 38];
@@ -62,7 +62,11 @@ function handleResult(graph, scores) {
   var ss = Game.scoresToJs(scores);
   for (i = 0; i < ss.length; i++) {
     scrs[i].bkg.draw();
+    if (('' + ss[i]).length > scrs[i].scr.getAttr('text').length) {
+      scrs[i].scr.fontSize(Math.round(scrs[i].scr.fontSize() / 5 * 4));
+    }
     scrs[i].scr.setAttr('text', '' + ss[i]);
+    scrs[i].scr.setOffset({x: scrs[i].scr.getWidth() / 2, y: scrs[i].scr.getHeight() / 2});
     scrs[i].scr.draw();
   }
   return new Promise((resolve, reject) => resolve());
