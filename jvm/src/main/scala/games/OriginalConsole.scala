@@ -45,8 +45,8 @@ object OriginalConsole {
         }
       )
       next.flatMap(move)
-    case NoMoreMoves(graph, history, scores) => Future {
-      println("\nNo valid moves left")
+    case NoMoreMoves(winner, graph, history, scores) => Future {
+      println(s"\nNo valid moves left - ${colors(winner.p)}Player ${winner.p}${Console.RESET} WINS")
       println(s"Final score: ${display(scores)}")
     }
     case Eleven(winner, graph, history, scores) => Future {

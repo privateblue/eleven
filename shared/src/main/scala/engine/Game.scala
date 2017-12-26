@@ -15,6 +15,7 @@ case class Continued(
 ) extends Game
 
 case class NoMoreMoves(
+  winner: Player,
   graph: Graph[Value],
   history: List[(Option[Index], Option[Direction])],
   scores: IndexedSeq[Score]
@@ -58,7 +59,7 @@ object Game {
       if (elevs.size > 0)
         Eleven(elevs.head, reduced, (e, dir) :: state.history, added)
       else if (empties(reduced).size == 0 && moves.size == 0)
-        NoMoreMoves(reduced, (e, dir) :: state.history, added)
+        NoMoreMoves(leader(added), reduced, (e, dir) :: state.history, added)
       else
         Continued(reduced, (e, dir) :: state.history, added)
     }
@@ -87,4 +88,7 @@ object Game {
     val s = (appeared sum) + (removed diff (appeared flatMap (v => IndexedSeq(v - 1, v - 1))) sum)
     Score(s)
   }
+
+  def leader(scores: IndexedSeq[Score]): Player =
+    Player(scores.indexOf(scores.map(_.s).max))
 }

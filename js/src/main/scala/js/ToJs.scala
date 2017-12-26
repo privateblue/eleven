@@ -25,9 +25,18 @@ object ToJs {
     def toJs(c: Color) = c.c
   }
 
-  implicit def tupleToJs[T: ToJs] = new ToJs[Tuple2[T, T]] {
-    def toJs(t: (T, T)) =
-      js.Dynamic.literal(from = to(t._1), to = to(t._2))
+  implicit val edgeToJs = new ToJs[Tuple2[Index, Index]] {
+    def toJs(e: (Index, Index)) =
+      js.Dynamic.literal(from = to(e._1), to = to(e._2))
+  }
+
+  implicit val historyEntryToJs = new ToJs[Tuple2[Option[Index], Option[Direction]]] {
+    def toJs(he: (Option[Index], Option[Direction])) = he match {
+      case (Some(e), Some(d)) => js.Dynamic.literal(put = to(e), dir = to(d))
+      case (Some(e), None) => js.Dynamic.literal(put = to(e))
+      case (None, Some(d)) => js.Dynamic.literal(dir = to(d))
+      case _ => js.Dynamic.literal()
+    }
   }
 
   implicit def setToJs[T](implicit tToJs: ToJs[T]) = new ToJs[Set[T]] {
@@ -36,6 +45,10 @@ object ToJs {
 
   implicit def indexedSeqToJs[T](implicit tToJs: ToJs[T]) = new ToJs[IndexedSeq[T]] {
     def toJs(seq: IndexedSeq[T]) = seq.map(tToJs.toJs).toJSArray
+  }
+
+  implicit def listToJs[T](implicit tToJs: ToJs[T]) = new ToJs[List[T]] {
+    def toJs(list: List[T]) = list.map(tToJs.toJs).toJSArray
   }
 
   implicit def graphToJs[T: ToJs] = new ToJs[Graph[T]] {
@@ -61,11 +74,27 @@ object ToJs {
   implicit val gameToJs = new ToJs[Game] {
     def toJs(game: Game) = game match {
       case Continued(graph, history, scores) =>
-        js.Dynamic.literal(state = "continued", graph = to(graph), move = history.size, scores = to(scores))
+        js.Dynamic.literal(
+          state = "continued",
+          graph = to(graph),
+          history = to(history),
+          scores = to(scores)
+        )
       case NoMoreMoves(graph, history, scores) =>
-        js.Dynamic.literal(state = "nomoremoves", graph = to(graph), move = history.size, scores = to(scores))
+        js.Dynamic.literal(
+          state = "nomoremoves",
+          graph = to(graph),
+          history = to(history),
+          scores = to(scores)
+        )
       case Eleven(winner, graph, history, scores) =>
-        js.Dynamic.literal(state = "eleven", winner = to(winner), graph = to(graph), move = history.size, scores = to(scores))
+        js.Dynamic.literal(
+          state = "eleven",
+          winner = to(winner),
+          graph = to(graph),
+          history = to(history),
+          scores = to(scores)
+        )
     }
   }
 }

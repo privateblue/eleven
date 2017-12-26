@@ -1,7 +1,8 @@
-var players = 3;
+var players = 2;
 
 var colorMap = [[0,0,255], [255,0,0], [0,255,0]];
 var directionKeyMap = [39, 37, 40, 38];
+var directionSymbolMap = ['→', '←', '↓', '↑'];
 var circles = [];
 var indicators = [];
 var arrows = [];
@@ -17,13 +18,13 @@ move(start);
 
 function move(g) {
   var game = Game.gameToJs(g);
-  player = game.move % players;
+  player = game.history.length % players;
   if (game.state == 'continued') {
     var emptyPicker = Game.emptyPickerOf(pickEmpty);
     var directionPicker = Game.directionPickerOf(pickDirection);
     var resultHandler = Game.resultHandlerOf(handleResult);
-    //var next = Game.move(g, emptyPicker, directionPicker, resultHandler);
-    var next = Game.moveWithRandomEmpty(g, directionPicker, resultHandler);
+    var next = Game.move(g, emptyPicker, directionPicker, resultHandler);
+    //var next = Game.moveWithRandomEmpty(g, directionPicker, resultHandler);
     Game.nextToJs(next).then(move);
   } else if (game.state == 'nomoremoves') {
     console.log('no more valid moves');
@@ -55,6 +56,9 @@ function pickDirection(graph, directions) {
       if (keys.includes(evt.keyCode)) {
         document.removeEventListener('keydown', _handler, false);
         var direction = directionKeyMap.indexOf(evt.keyCode);
+        scrs[player].last.setAttr('text', '');
+        scrs[player].last.draw();
+        scrs[player].last.setAttr('text', directionSymbolMap[direction]);
         resolve(Game.directionOf(direction));
       }
     }, false);
@@ -66,9 +70,9 @@ function handleResult(graph, scores) {
   var ss = Game.scoresToJs(scores);
   for (i = 0; i < ss.length; i++) {
     scrs[i].bkg.draw();
-    if (('' + ss[i]).length > scrs[i].scr.getAttr('text').length) {
-      scrs[i].scr.fontSize(Math.round(scrs[i].scr.fontSize() / 5 * 4));
-    }
+    // if (('' + ss[i]).length > scrs[i].scr.getAttr('text').length) {
+    //   scrs[i].scr.fontSize(Math.round(scrs[i].scr.fontSize() / 5 * 4));
+    // }
     scrs[i].scr.setAttr('text', '' + ss[i]);
     scrs[i].scr.setOffset({x: scrs[i].scr.getWidth() / 2, y: scrs[i].scr.getHeight() / 2});
     scrs[i].scr.draw();
@@ -138,14 +142,24 @@ function initBoard(p, g) {
       x: cx - (3 * s) - r + (i + 1) * scrw,
       y: cy - (3 * s) - 4 * scrr,
       text: '0',
-      fontFamily: 'Bungee',
+      fontFamily: 'Dosis',
       fontSize: scrr,
       fill: 'white'
     });
     scr.setOffset({x: scr.getWidth() / 2, y: scr.getHeight() / 2});
-    scrs.push({bkg: star, scr: scr});
+    var last = new Konva.Text({
+      x: cx - (3 * s) - r + (i + 1) * scrw + star.getWidth() - scrr,
+      y: cy - (3 * s) - 4.5 * scrr,
+      text: '',
+      fontFamily: 'Dosis',
+      fontStyle: 'bold',
+      fontSize: scrr,
+      fill: 'black'
+    });
+    scrs.push({bkg: star, scr: scr, last: last});
     layer.add(star);
     layer.add(scr);
+    layer.add(last);
   }
   var rotate = new Konva.Animation(function(frame) {
     scrs[player].bkg.rotate(frame.timeDiff / 10);
@@ -168,7 +182,8 @@ function initBoard(p, g) {
         x: x,
         y: y,
         text: '0',
-        fontFamily: 'Bungee',
+        fontFamily: 'Dosis',
+        fontStyle: 'bold',
         fontSize: r
       });
       t.setOffset({x: t.getWidth() / 2, y: t.getHeight() / 2});
@@ -191,11 +206,12 @@ function initBoard(p, g) {
       var y2 = to.attrs.y;
       var a = new Konva.Arrow({
         points: arrowPoints(x1, y1, x2, y2, r, str),
-        pointerLength: str,
-        pointerWidth : str,
+        tension: 1,
+        pointerLength: str * 2,
+        pointerWidth: str * 2,
         fill: 'black',
         stroke: 'black',
-        strokeWidth: str / 2
+        strokeWidth: 1
       });
       arrows[d].push(a);
       layer.add(a);
@@ -212,17 +228,17 @@ function initBoard(p, g) {
 
 function arrowPoints(x1, y1, x2, y2, r, str) {
   if (x1 === x2 && y1 > y2) {
-    // north
-    return [x1, y1 - r, x2, y2 + r + str];
+    // up
+    return [x1, y1 - r, x2, y2 + r + str / 2];
   } else if (x1 === x2 && y2 > y1) {
-    // south
-    return [x1, y1 + r, x2, y2 - r - str];
+    // down
+    return [x1, y1 + r, x2, y2 - r - str / 2];
   } else if (y1 === y2 && x1 > x2) {
-    // east
-    return [x1 - r, y1, x2 + r + str, y2];
+    // left
+    return [x1 - r, y1, x2 + r + str / 2, y2];
   } else if (y1 === y2 && x2 > x1) {
-    // west
-    return [x1 + r, y1, x2 - r - str, y2];
+    // right
+    return [x1 + r, y1, x2 - r - str / 2, y2];
   }
 }
 
