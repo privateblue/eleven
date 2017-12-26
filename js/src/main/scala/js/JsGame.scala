@@ -28,11 +28,11 @@ object JsGame {
   ) = Game.move(state, emptyPicker, directionPicker, resultHandler)
 
   @JSExport
-  def randomMove(
+  def moveWithRandomEmpty(
     state: Continued,
     directionPicker: (Graph[Value], IndexedSeq[Direction]) => Future[Direction],
     resultHandler: (Graph[Value], IndexedSeq[Score]) => Future[Unit]
-  ) = Game.randomMove(state, directionPicker, resultHandler)
+  ) = Game.move(state, Game.randomEmptyPicker, directionPicker, resultHandler)
 
   @JSExport
   def gameToJs(game: Game) = ToJs.to(game)

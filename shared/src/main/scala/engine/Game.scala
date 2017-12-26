@@ -64,13 +64,8 @@ object Game {
     }
   }
 
-  def randomMove(
-    state: Continued,
-    directionPicker: (Graph[Value], IndexedSeq[Direction]) => Future[Direction],
-    resultHandler: (Graph[Value], IndexedSeq[Score]) => Future[Unit]
-  )(implicit ec: ExecutionContext): Future[Game] =
-    move(state, {es => Future.successful(Random.shuffle(es).head)}, directionPicker, resultHandler)
-
+  def randomEmptyPicker(es: IndexedSeq[Index]): Future[Index] =
+    Future.successful(Random.shuffle(es).head)
 
   def empties(graph: Graph[Value]): IndexedSeq[Index] =
     graph.indices.filter(graph.at(_) == Value.empty)

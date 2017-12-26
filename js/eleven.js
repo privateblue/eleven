@@ -23,7 +23,7 @@ function move(g) {
     var directionPicker = Game.directionPickerOf(pickDirection);
     var resultHandler = Game.resultHandlerOf(handleResult);
     //var next = Game.move(g, emptyPicker, directionPicker, resultHandler);
-    var next = Game.randomMove(g, directionPicker, resultHandler);
+    var next = Game.moveWithRandomEmpty(g, directionPicker, resultHandler);
     Game.nextToJs(next).then(move);
   } else if (game.state == 'nomoremoves') {
     console.log('no more valid moves');
