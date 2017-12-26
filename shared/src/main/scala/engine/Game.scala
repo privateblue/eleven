@@ -2,6 +2,7 @@ package engine
 
 import graph._
 
+import scala.util.Random
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext
 
@@ -62,6 +63,14 @@ object Game {
         Continued(reduced, (e, dir) :: state.history, added)
     }
   }
+
+  def randomMove(
+    state: Continued,
+    directionPicker: (Graph[Value], IndexedSeq[Direction]) => Future[Direction],
+    resultHandler: (Graph[Value], IndexedSeq[Score]) => Future[Unit]
+  )(implicit ec: ExecutionContext): Future[Game] =
+    move(state, {es => Future.successful(Random.shuffle(es).head)}, directionPicker, resultHandler)
+
 
   def empties(graph: Graph[Value]): IndexedSeq[Index] =
     graph.indices.filter(graph.at(_) == Value.empty)

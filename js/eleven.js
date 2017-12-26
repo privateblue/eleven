@@ -1,11 +1,13 @@
-var players = 1;
+var players = 3;
 
-var colorMap = ['#92140C', '#CF5C36', '#353238', '#C1B4AE', '#5C415D'];
+var colorMap = [[0,0,255], [255,0,0], [0,255,0]];
 var directionKeyMap = [39, 37, 40, 38];
 var circles = [];
+var indicators = [];
 var arrows = [];
 var vals = [];
 var scrs = [];
+var player;
 
 initBoard(players, Game.graphOriginal);
 updateBoard(Game.graphOriginal);
@@ -15,11 +17,13 @@ move(start);
 
 function move(g) {
   var game = Game.gameToJs(g);
+  player = game.move % players;
   if (game.state == 'continued') {
     var emptyPicker = Game.emptyPickerOf(pickEmpty);
     var directionPicker = Game.directionPickerOf(pickDirection);
     var resultHandler = Game.resultHandlerOf(handleResult);
-    var next = Game.move(g, emptyPicker, directionPicker, resultHandler);
+    //var next = Game.move(g, emptyPicker, directionPicker, resultHandler);
+    var next = Game.randomMove(g, directionPicker, resultHandler);
     Game.nextToJs(next).then(move);
   } else if (game.state == 'nomoremoves') {
     console.log('no more valid moves');
@@ -73,25 +77,32 @@ function handleResult(graph, scores) {
 }
 
 function updateBoard(g) {
+  indicators.forEach(t => t.reset());
   var graph = Game.graphToJs(g);
   for (i = 0; i < graph.values.length; i++) {
     if ("c" in graph.values[i]) {
-      var color = colorMap[graph.values[i].c];
-      circles[i].fill(color);
+      var c = colorMap[graph.values[i].c].slice();
+      if (graph.values[i].v != 0) c.push(graph.values[i].v / 10);
+      circles[i].fill(color(c));
       circles[i].draw();
     } else {
       circles[i].fill('white');
       circles[i].draw();
     }
-    if (graph.values[i].v != 0) {
-      vals[i].setAttr('text', graph.values[i].v);
-      vals[i].moveToTop();
-      vals[i].visible(true);
-      vals[i].draw();
-    } else {
-      vals[i].visible(false);
-      vals[i].draw();
+    indicators[i] = new Konva.Tween({
+      node: circles[i],
+      scaleX: 1.2,
+      scaleY: 1.2,
+      duration: 0.1,
+      onFinish: function() { this.reverse(); }
+    });
+    if ((!vals[i].visible() && graph.values[i].v != 0) || graph.values[i].v > parseInt(vals[i].getAttr('text'))) {
+      indicators[i].play();
     }
+    vals[i].setAttr('text', graph.values[i].v);
+    vals[i].setOffset({x: vals[i].getWidth() / 2, y: vals[i].getHeight() / 2});
+    vals[i].visible(graph.values[i].v != 0);
+    vals[i].draw();
   }
 }
 
@@ -113,6 +124,7 @@ function initBoard(p, g) {
 
   var layer = new Konva.Layer();
 
+  // scores
   for (i = 0; i < p; i++) {
     var star = new Konva.Star({
       x: cx - (3 * s) - r + (i + 1) * scrw,
@@ -120,7 +132,7 @@ function initBoard(p, g) {
       numPoints: 7,
       innerRadius: scrr,
       outerRadius: scrr2,
-      fill: colorMap[i]
+      fill: color(colorMap[i])
     });
     var scr = new Konva.Text({
       x: cx - (3 * s) - r + (i + 1) * scrw,
@@ -135,7 +147,12 @@ function initBoard(p, g) {
     layer.add(star);
     layer.add(scr);
   }
+  var rotate = new Konva.Animation(function(frame) {
+    scrs[player].bkg.rotate(frame.timeDiff / 10);
+  }, layer);
+  rotate.start();
 
+  // circles
   for (y = cy - (3 * s); y <= cy + (3 * s); y = y + s + s) {
     for (x = cx - (3 * s); x <= cx + (3 * s); x = x + s + s) {
       var c = new Konva.Circle({
@@ -161,6 +178,7 @@ function initBoard(p, g) {
     }
   }
 
+  // arrows
   for (d = 0; d < graph.edges.length; d++) {
     arrows.push([]);
     for (e = 0; e < graph.edges[d].length; e++) {
@@ -205,5 +223,13 @@ function arrowPoints(x1, y1, x2, y2, r, str) {
   } else if (y1 === y2 && x2 > x1) {
     // west
     return [x1 + r, y1, x2 - r - str, y2];
+  }
+}
+
+function color(arr) {
+  if (arr.length > 3) {
+    return 'rgba(' + arr[0] + ',' + arr[1] + ',' + arr[2] + ',' + arr[3] + ')';
+  } else {
+    return 'rgb(' + arr[0] + ',' + arr[1] + ',' + arr[2] + ')';
   }
 }
