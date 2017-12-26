@@ -138,7 +138,7 @@ function initBoard(p, g) {
       x: cx - (3 * s) - r + (i + 1) * scrw,
       y: cy - (3 * s) - 4 * scrr,
       text: '0',
-      fontFamily: 'monospace',
+      fontFamily: 'Bungee',
       fontSize: scrr,
       fill: 'white'
     });
@@ -168,7 +168,7 @@ function initBoard(p, g) {
         x: x,
         y: y,
         text: '0',
-        fontFamily: 'monospace',
+        fontFamily: 'Bungee',
         fontSize: r
       });
       t.setOffset({x: t.getWidth() / 2, y: t.getHeight() / 2});
