@@ -1,13 +1,14 @@
-var colorMap = ['red', 'blue', 'yellow'];
+var players = 4;
+
+var colorMap = ['#92140C', '#CF5C36', '#353238', '#C1B4AE', '#5C415D'];
 var directionKeyMap = [39, 37, 40, 38];
 var circles = [];
 var arrows = [];
-var texts = [];
+var vals = [];
+var scrs = [];
 
-initGraph(Game.graphOriginal);
-updateGraph(Game.graphOriginal);
-
-var players = 2
+initBoard(players, Game.graphOriginal);
+updateBoard(Game.graphOriginal);
 
 var start = Game.start(Game.graphOriginal, players);
 move(start);
@@ -41,7 +42,7 @@ function pickEmpty(empties) {
 }
 
 function pickDirection(graph, directions) {
-  updateGraph(graph);
+  updateBoard(graph);
   var dirs = Game.directionsToJs(directions);
   var keys = dirs.map(d => directionKeyMap[d]);
   return new Promise(function(resolve, reject) {
@@ -57,11 +58,17 @@ function pickDirection(graph, directions) {
 }
 
 function handleResult(graph, scores) {
-  updateGraph(graph);
+  updateBoard(graph);
+  var ss = Game.scoresToJs(scores);
+  for (i = 0; i < ss.length; i++) {
+    scrs[i].bkg.draw();
+    scrs[i].scr.setAttr('text', '' + ss[i]);
+    scrs[i].scr.draw();
+  }
   return new Promise((resolve, reject) => resolve());
 }
 
-function updateGraph(g) {
+function updateBoard(g) {
   var graph = Game.graphToJs(g);
   for (i = 0; i < graph.values.length; i++) {
     if ("c" in graph.values[i]) {
@@ -73,18 +80,18 @@ function updateGraph(g) {
       circles[i].draw();
     }
     if (graph.values[i].v != 0) {
-      texts[i].setAttr('text', graph.values[i].v);
-      texts[i].moveToTop();
-      texts[i].visible(true);
-      texts[i].draw();
+      vals[i].setAttr('text', graph.values[i].v);
+      vals[i].moveToTop();
+      vals[i].visible(true);
+      vals[i].draw();
     } else {
-      texts[i].visible(false);
-      texts[i].draw();
+      vals[i].visible(false);
+      vals[i].draw();
     }
   }
 }
 
-function initGraph(g) {
+function initBoard(p, g) {
   var graph = Game.graphToJs(g);
 
   var width = window.innerWidth;
@@ -96,12 +103,40 @@ function initGraph(g) {
   var r = Math.round(size / 15);
   var str = Math.round(r / 10);
   var s = Math.round(r * 3 / 2);
+  var scrw = Math.round((6 * s + 2 * r) / p);
 
   var layer = new Konva.Layer();
 
+  for (i = 0; i < p; i++) {
+    var rect = new Konva.Rect({
+      x: cx - (3 * s) - r + i * scrw,
+      y: cy - (3 * s) - 130,
+      width: scrw,
+      height: 55,
+      cornerRadius: 20,
+      fill: colorMap[i],
+      stroke: 'white',
+      strokeWidth: 3 * str
+    });
+    var scr = new Konva.Text({
+      x: cx - (3 * s) - r + i * scrw,
+      y: cy - (3 * s) - 130,
+      width: scrw,
+      height: 55,
+      text: '0',
+      fontFamily: 'monospace',
+      fontSize: 30,
+      align: 'center',
+      padding: 12
+    });
+    scrs.push({bkg: rect, scr: scr});
+    layer.add(rect);
+    layer.add(scr);
+  }
+
   for (y = cy - (3 * s); y <= cy + (3 * s); y = y + s + s) {
     for (x = cx - (3 * s); x <= cx + (3 * s); x = x + s + s) {
-       var c = new Konva.Circle({
+      var c = new Konva.Circle({
         x: x,
         y: y,
         radius: r,
@@ -110,17 +145,17 @@ function initGraph(g) {
       });
       circles.push(c);
       layer.add(c);
-       var t = new Konva.Text({
-         x: x,
-         y: y,
-         text: '0',
-         fontFamily: 'monospace',
-         fontSize: 50
-       });
-       t.setOffset({x: t.getWidth() / 2, y: t.getHeight() / 2});
-       t.visible(false);
-       texts.push(t);
-       layer.add(t);
+      var t = new Konva.Text({
+        x: x,
+        y: y,
+        text: '0',
+        fontFamily: 'monospace',
+        fontSize: 50
+      });
+      t.setOffset({x: t.getWidth() / 2, y: t.getHeight() / 2});
+      t.visible(false);
+      vals.push(t);
+      layer.add(t);
     }
   }
 
