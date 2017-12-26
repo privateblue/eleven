@@ -103,34 +103,32 @@ function initBoard(p, g) {
   var r = Math.round(size / 15);
   var str = Math.round(r / 10);
   var s = Math.round(r * 3 / 2);
-  var scrw = Math.round((6 * s + 2 * r) / p);
+  var scrw = Math.round((6 * s + 2 * r) / (p + 1));
+  var scrr = Math.round(r / 2);
+  var scrr2 = Math.round(scrr / 3 * 4);
 
   var layer = new Konva.Layer();
 
   for (i = 0; i < p; i++) {
-    var rect = new Konva.Rect({
-      x: cx - (3 * s) - r + i * scrw,
-      y: cy - (3 * s) - 130,
-      width: scrw,
-      height: 55,
-      cornerRadius: 20,
-      fill: colorMap[i],
-      stroke: 'white',
-      strokeWidth: 3 * str
+    var star = new Konva.Star({
+      x: cx - (3 * s) - r + (i + 1) * scrw,
+      y: cy - (3 * s) - 4 * scrr,
+      numPoints: 7,
+      innerRadius: scrr,
+      outerRadius: scrr2,
+      fill: colorMap[i]
     });
     var scr = new Konva.Text({
-      x: cx - (3 * s) - r + i * scrw,
-      y: cy - (3 * s) - 130,
-      width: scrw,
-      height: 55,
+      x: cx - (3 * s) - r + (i + 1) * scrw,
+      y: cy - (3 * s) - 4 * scrr,
       text: '0',
       fontFamily: 'monospace',
-      fontSize: 30,
-      align: 'center',
-      padding: 12
+      fontSize: scrr,
+      fill: 'white'
     });
-    scrs.push({bkg: rect, scr: scr});
-    layer.add(rect);
+    scr.setOffset({x: scr.getWidth() / 2, y: scr.getHeight() / 2});
+    scrs.push({bkg: star, scr: scr});
+    layer.add(star);
     layer.add(scr);
   }
 
@@ -150,7 +148,7 @@ function initBoard(p, g) {
         y: y,
         text: '0',
         fontFamily: 'monospace',
-        fontSize: 50
+        fontSize: r
       });
       t.setOffset({x: t.getWidth() / 2, y: t.getHeight() / 2});
       t.visible(false);
