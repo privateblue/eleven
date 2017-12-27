@@ -4,7 +4,7 @@ var colorMap = [[0,0,255], [255,0,0], [0,255,0]];
 var directionKeyMap = [39, 37, 40, 38];
 var directionSymbolMap = ['→', '←', '↓', '↑'];
 var circles = [];
-var indicators = [];
+var wobbles = [];
 var arrows = [];
 var vals = [];
 var scrs = [];
@@ -19,11 +19,23 @@ move(start);
 function move(g) {
   var game = Game.gameToJs(g);
   player = game.history.length % players;
+
+  if (game.history[0]) {
+    var previous = (game.history.length - 1) % players
+    scrs[previous].last.setAttr('text', '');
+    scrs[previous].last.draw();
+    if ('dir' in game.history[0]) {
+      var symbol = directionSymbolMap[game.history[0].dir];
+      scrs[previous].last.setAttr('text', symbol);
+    }
+  }
+
   if (game.state == 'continued') {
     var emptyPicker = Game.emptyPickerOf(pickEmpty);
     var directionPicker = Game.directionPickerOf(pickDirection);
     var resultHandler = Game.resultHandlerOf(handleResult);
-    var next = Game.move(g, emptyPicker, directionPicker, resultHandler);
+    if (player == 1) var next = Game.aiMove(g, resultHandler);
+    else var next = Game.move(g, emptyPicker, directionPicker, resultHandler);
     //var next = Game.moveWithRandomEmpty(g, directionPicker, resultHandler);
     Game.nextToJs(next).then(move);
   } else if (game.state == 'nomoremoves') {
@@ -56,9 +68,6 @@ function pickDirection(graph, directions) {
       if (keys.includes(evt.keyCode)) {
         document.removeEventListener('keydown', _handler, false);
         var direction = directionKeyMap.indexOf(evt.keyCode);
-        scrs[player].last.setAttr('text', '');
-        scrs[player].last.draw();
-        scrs[player].last.setAttr('text', directionSymbolMap[direction]);
         resolve(Game.directionOf(direction));
       }
     }, false);
@@ -70,9 +79,6 @@ function handleResult(graph, scores) {
   var ss = Game.scoresToJs(scores);
   for (i = 0; i < ss.length; i++) {
     scrs[i].bkg.draw();
-    // if (('' + ss[i]).length > scrs[i].scr.getAttr('text').length) {
-    //   scrs[i].scr.fontSize(Math.round(scrs[i].scr.fontSize() / 5 * 4));
-    // }
     scrs[i].scr.setAttr('text', '' + ss[i]);
     scrs[i].scr.setOffset({x: scrs[i].scr.getWidth() / 2, y: scrs[i].scr.getHeight() / 2});
     scrs[i].scr.draw();
@@ -81,7 +87,7 @@ function handleResult(graph, scores) {
 }
 
 function updateBoard(g) {
-  indicators.forEach(t => t.reset());
+  wobbles.forEach(t => t.reset());
   var graph = Game.graphToJs(g);
   for (i = 0; i < graph.values.length; i++) {
     if ("c" in graph.values[i]) {
@@ -93,7 +99,7 @@ function updateBoard(g) {
       circles[i].fill('white');
       circles[i].draw();
     }
-    indicators[i] = new Konva.Tween({
+    wobbles[i] = new Konva.Tween({
       node: circles[i],
       scaleX: 1.2,
       scaleY: 1.2,
@@ -101,7 +107,7 @@ function updateBoard(g) {
       onFinish: function() { this.reverse(); }
     });
     if ((!vals[i].visible() && graph.values[i].v != 0) || graph.values[i].v > parseInt(vals[i].getAttr('text'))) {
-      indicators[i].play();
+      wobbles[i].play();
     }
     vals[i].setAttr('text', graph.values[i].v);
     vals[i].setOffset({x: vals[i].getWidth() / 2, y: vals[i].getHeight() / 2});

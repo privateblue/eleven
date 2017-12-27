@@ -80,9 +80,10 @@ object ToJs {
           history = to(history),
           scores = to(scores)
         )
-      case NoMoreMoves(graph, history, scores) =>
+      case NoMoreMoves(winner, graph, history, scores) =>
         js.Dynamic.literal(
           state = "nomoremoves",
+          winner = to(winner),
           graph = to(graph),
           history = to(history),
           scores = to(scores)
