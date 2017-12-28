@@ -37,7 +37,7 @@ function move(g) {
     if (player == 1) var next = Game.aiMove(g, resultHandler);
     else var next = Game.move(g, emptyPicker, directionPicker, resultHandler);
     //var next = Game.moveWithRandomEmpty(g, directionPicker, resultHandler);
-    Game.nextToJs(next).then(move);
+    Game.nextToJs(next).then(n => setTimeout(() => move(n), 200));
   } else if (game.state == 'nomoremoves') {
     console.log('no more valid moves');
   } else if (game.state == 'eleven') {

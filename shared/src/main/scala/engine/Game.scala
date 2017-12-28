@@ -78,6 +78,7 @@ object Game {
     resultHandler: ResultHandler
   )(implicit ec: ExecutionContext): Future[Game] = {
     val players = state.scores.size
+
     def best(
       player: Player,
       graph: Graph[Value],
@@ -98,27 +99,31 @@ object Game {
         val put =
           if (!es.isEmpty) es.map(e => Some(e) -> graph.set(e, starter))
           else IndexedSeq(None -> graph)
-        val childScores = put.flatMap { case (e, gp) =>
-          val reds = reducibles(color, gp)
-          val reduced =
+        val childScores = for {
+          (e, gp) <- put
+          reds = reducibles(color, gp)
+          reduced =
             if (!reds.isEmpty)
               reds.map(d => Some(d) -> WriteBackReducer.reduce(color, d, gp))
             else
               IndexedSeq(None -> gp)
-          reduced.map { case (d, gr) =>
-            val added = updatedScores(scores, next, scored(gp, gr))
-            (e, d, best(next, gr, added, depth - 1)._3)
-          }
-        }
+          (d, gr) <- reduced
+          added = updatedScores(scores, next, scored(gp, gr))
+          (_, _, ss) = best(next, gr, added, depth - 1)
+        } yield (e, d, ss)
         childScores
-          .sortBy(ss => 2 * ss._3(player.p).s - ss._3.map(_.s).sum)
+          // sort by player's score minus sum of other players' score
+          .sortBy { case (e, d, ss) => 2 * ss(player.p).s - ss.map(_.s).sum }
           .head
       }
     }
+
     val player = Player(state.history.size % players)
     val (e, d, _) = best(player, state.graph, state.scores, 1)
     move(
       state = state,
+      // if e is None, emptyPicker won't be called at all
+      // same applies to d and directionPicker
       emptyPicker = _ => Future.successful(e.get),
       directionPicker = (_, _) => Future.successful(d.get),
       resultHandler = resultHandler
