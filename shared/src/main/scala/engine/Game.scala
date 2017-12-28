@@ -10,28 +10,29 @@ sealed trait Game
 
 case class Continued(
   graph: Graph[Value],
-  history: List[(Option[Index], Option[Direction])],
+  history: List[Game.HistoryEntry],
   scores: IndexedSeq[Score]
 ) extends Game
 
 case class NoMoreMoves(
   winner: Player,
   graph: Graph[Value],
-  history: List[(Option[Index], Option[Direction])],
+  history: List[Game.HistoryEntry],
   scores: IndexedSeq[Score]
 ) extends Game
 
 case class Eleven(
   winner: Player,
   graph: Graph[Value],
-  history: List[(Option[Index], Option[Direction])],
+  history: List[Game.HistoryEntry],
   scores: IndexedSeq[Score]
 ) extends Game
 
 object Game {
+  type HistoryEntry = (Option[Index], Option[Direction])
   type EmptyPicker = IndexedSeq[Index] => Future[Index]
   type DirectionPicker = (Graph[Value], IndexedSeq[Direction]) => Future[Direction]
-  type ResultHandler = (Graph[Value], IndexedSeq[Score]) => Future[Unit]
+  type ResultHandler = (HistoryEntry, Graph[Value], IndexedSeq[Score]) => Future[Unit]
 
   def start(graph: Graph[Value], players: Int): Game =
     Continued(graph, List.empty, IndexedSeq.fill(players)(Score(0)))
@@ -54,19 +55,20 @@ object Game {
       reds = reducibles(color, put)
       dir <- if (!reds.isEmpty) directionPicker(put, reds).map(Option.apply)
              else Future.successful(None)
+      entry = (e, dir)
       reduced = dir.map(WriteBackReducer.reduce(color, _, put)).getOrElse(put)
       score = scored(put, reduced)
       added = updatedScores(state.scores, next, score)
-      _ <- resultHandler(reduced, added)
+      _ <- resultHandler(entry, reduced, added)
       elevs = elevens(reduced)
       moves = 0 until players flatMap (c => reducibles(Color(c), reduced))
     } yield {
       if (elevs.size > 0)
-        Eleven(elevs.head, reduced, (e, dir) :: state.history, added)
+        Eleven(elevs.head, reduced, entry :: state.history, added)
       else if (empties(reduced).size == 0 && moves.size == 0)
-        NoMoreMoves(leader(added), reduced, (e, dir) :: state.history, added)
+        NoMoreMoves(leader(added), reduced, entry :: state.history, added)
       else
-        Continued(reduced, (e, dir) :: state.history, added)
+        Continued(reduced, entry :: state.history, added)
     }
   }
 

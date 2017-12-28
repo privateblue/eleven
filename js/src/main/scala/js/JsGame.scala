@@ -22,22 +22,22 @@ object JsGame {
   @JSExport
   def move(
     state: Continued,
-    emptyPicker: (IndexedSeq[Index]) => Future[Index],
-    directionPicker: (Graph[Value], IndexedSeq[Direction]) => Future[Direction],
-    resultHandler: (Graph[Value], IndexedSeq[Score]) => Future[Unit]
+    emptyPicker: Game.EmptyPicker,
+    directionPicker: Game.DirectionPicker,
+    resultHandler: Game.ResultHandler
   ) = Game.move(state, emptyPicker, directionPicker, resultHandler)
 
   @JSExport
   def moveWithRandomEmpty(
     state: Continued,
-    directionPicker: (Graph[Value], IndexedSeq[Direction]) => Future[Direction],
-    resultHandler: (Graph[Value], IndexedSeq[Score]) => Future[Unit]
+    directionPicker: Game.DirectionPicker,
+    resultHandler: Game.ResultHandler
   ) = Game.move(state, Game.randomEmptyPicker, directionPicker, resultHandler)
 
   @JSExport
   def aiMove(
     state: Continued,
-    resultHandler: (Graph[Value], IndexedSeq[Score]) => Future[Unit]
+    resultHandler: Game.ResultHandler
   ) = Game.bestMove(state, resultHandler)
 
   @JSExport
@@ -51,6 +51,9 @@ object JsGame {
 
   @JSExport
   def directionsToJs(dirs: IndexedSeq[Direction]) = ToJs.to(dirs)
+
+  @JSExport
+  def historyEntryToJs(entry: Game.HistoryEntry) = ToJs.to(entry)
 
   @JSExport
   def scoresToJs(scores: IndexedSeq[Score]) = ToJs.to(scores)
@@ -78,7 +81,7 @@ object JsGame {
 
   @JSExport
   def resultHandlerOf(
-    picker: js.Function2[Graph[Value], IndexedSeq[Score], js.Promise[Unit]]
+    handler: js.Function3[Game.HistoryEntry, Graph[Value], IndexedSeq[Score], js.Promise[Unit]]
   ) =
-    { (g: Graph[Value], ss:  IndexedSeq[Score]) => picker(g, ss).toFuture }
+    { (entry: Game.HistoryEntry, g: Graph[Value], ss: IndexedSeq[Score]) => handler(entry, g, ss).toFuture }
 }

@@ -37,7 +37,7 @@ object OriginalConsole {
           println(board(put))
           pickDirection(dirs)
         },
-        resultHandler = { (graph, scores) =>
+        resultHandler = { (entry, graph, scores) =>
           Future {
             println(board(graph))
             println(display(scores))

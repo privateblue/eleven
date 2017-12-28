@@ -8,7 +8,7 @@ var wobbles = [];
 var arrows = [];
 var vals = [];
 var scrs = [];
-var player;
+var player = 0;
 
 initBoard(players, Game.graphOriginal);
 updateBoard(Game.graphOriginal);
@@ -18,18 +18,6 @@ move(start);
 
 function move(g) {
   var game = Game.gameToJs(g);
-  player = game.history.length % players;
-
-  if (game.history[0]) {
-    var previous = (game.history.length - 1) % players
-    scrs[previous].last.setAttr('text', '');
-    scrs[previous].last.draw();
-    if ('dir' in game.history[0]) {
-      var symbol = directionSymbolMap[game.history[0].dir];
-      scrs[previous].last.setAttr('text', symbol);
-    }
-  }
-
   if (game.state == 'continued') {
     var emptyPicker = Game.emptyPickerOf(pickEmpty);
     var directionPicker = Game.directionPickerOf(pickDirection);
@@ -74,24 +62,17 @@ function pickDirection(graph, directions) {
   });
 }
 
-function handleResult(graph, scores) {
+function handleResult(entry, graph, scores) {
   updateBoard(graph);
-  var ss = Game.scoresToJs(scores);
-  for (i = 0; i < ss.length; i++) {
-    scrs[i].bkg.draw();
-    scrs[i].scr.setAttr('text', '' + ss[i]);
-    scrs[i].scr.setOffset({
-      x: scrs[i].scr.getWidth() / 2,
-      y: scrs[i].scr.getHeight() / 2
-    });
-    scrs[i].scr.draw();
-  }
+  updateScores(scores);
+  updateLastMove(entry);
+  player = (player + 1) % players;
   return new Promise((resolve, reject) => resolve());
 }
 
 function updateBoard(g) {
-  wobbles.forEach(t => t.reset());
   var graph = Game.graphToJs(g);
+  wobbles.forEach(t => t.reset());
   for (i = 0; i < graph.values.length; i++) {
     if ("c" in graph.values[i]) {
       var c = colorMap[graph.values[i].c].slice();
@@ -117,6 +98,26 @@ function updateBoard(g) {
     vals[i].visible(graph.values[i].v != 0);
     vals[i].draw();
   }
+}
+
+function updateScores(scores) {
+  var ss = Game.scoresToJs(scores);
+  for (i = 0; i < ss.length; i++) {
+    scrs[i].bkg.draw();
+    scrs[i].scr.setAttr('text', '' + ss[i]);
+    scrs[i].scr.setOffset({
+      x: scrs[i].scr.getWidth() / 2,
+      y: scrs[i].scr.getHeight() / 2
+    });
+    scrs[i].scr.draw();
+  }
+}
+
+function updateLastMove(entry) {
+  var he = Game.historyEntryToJs(entry);
+  scrs[player].last.setAttr('text', '');
+  scrs[player].last.draw();
+  if ('dir' in he) scrs[player].last.setAttr('text', directionSymbolMap[he.dir]);
 }
 
 function initBoard(p, g) {

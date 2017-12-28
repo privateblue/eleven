@@ -35,8 +35,8 @@ object ToJs {
     }
 
   implicit val historyEntryToJs =
-    new ToJs[Tuple2[Option[Index], Option[Direction]]] {
-      def toJs(he: (Option[Index], Option[Direction])) = he match {
+    new ToJs[Game.HistoryEntry] {
+      def toJs(entry: Game.HistoryEntry) = entry match {
         case (Some(e), Some(d)) => js.Dynamic.literal(put = to(e), dir = to(d))
         case (Some(e), None) => js.Dynamic.literal(put = to(e))
         case (None, Some(d)) => js.Dynamic.literal(dir = to(d))
