@@ -13,7 +13,7 @@ import scala.concurrent.duration.Duration
 import scala.concurrent.ExecutionContext.Implicits.global
 
 object OriginalConsole {
-  val colors = IndexedSeq(Console.RED, Console.GREEN, Console.YELLOW, Console.MAGENTA, Console.BLUE, Console.CYAN)
+  val colors = IndexedSeq(Console.RED, Console.GREEN, Console.BLUE)
 
   val players = 2
 
@@ -55,7 +55,10 @@ object OriginalConsole {
   }
 
   def pickEmpty(es: IndexedSeq[Index]): Future[Index] = {
-    val ask = Try(StdIn.readLine(s"""\nPick an empty for 1 (${es.map(_.i).mkString(", ")}) > """).toInt)
+    val ask = Try {
+      StdIn.readLine(s"""\nPick an empty for 1 (${es.map(_.i).mkString(", ")}) > """)
+        .toInt
+    }
     ask.map(Index.apply) match {
       case Success(i) if es.contains(i) => Future.successful(i)
       case _ => pickEmpty(es)

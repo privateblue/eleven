@@ -80,7 +80,10 @@ function handleResult(graph, scores) {
   for (i = 0; i < ss.length; i++) {
     scrs[i].bkg.draw();
     scrs[i].scr.setAttr('text', '' + ss[i]);
-    scrs[i].scr.setOffset({x: scrs[i].scr.getWidth() / 2, y: scrs[i].scr.getHeight() / 2});
+    scrs[i].scr.setOffset({
+      x: scrs[i].scr.getWidth() / 2,
+      y: scrs[i].scr.getHeight() / 2
+    });
     scrs[i].scr.draw();
   }
   return new Promise((resolve, reject) => resolve());
@@ -106,9 +109,9 @@ function updateBoard(g) {
       duration: 0.1,
       onFinish: function() { this.reverse(); }
     });
-    if ((!vals[i].visible() && graph.values[i].v != 0) || graph.values[i].v > parseInt(vals[i].getAttr('text'))) {
-      wobbles[i].play();
-    }
+    var newValue = !vals[i].visible() && graph.values[i].v != 0;
+    var increasedValue = graph.values[i].v > parseInt(vals[i].getAttr('text'));
+    if (newValue || increasedValue) wobbles[i].play();
     vals[i].setAttr('text', graph.values[i].v);
     vals[i].setOffset({x: vals[i].getWidth() / 2, y: vals[i].getHeight() / 2});
     vals[i].visible(graph.values[i].v != 0);

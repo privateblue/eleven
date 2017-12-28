@@ -42,5 +42,8 @@ case class DAG(next: Index, edges: Set[(Index, Index)]) {
   }
 
   def cut(index: Index): DAG =
-    DAG(Index(index.i + 1), edges.filterNot(e => e._1.i > index.i || e._2.i > index.i))
+    DAG(
+      Index(index.i + 1),
+      edges.filterNot(e => e._1.i > index.i || e._2.i > index.i)
+    )
 }

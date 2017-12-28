@@ -4,7 +4,10 @@ object Graph {
   def empty[V] = Graph(IndexedSeq.empty[V], IndexedSeq.empty)
 }
 
-case class Graph[V](values: IndexedSeq[V], edges: IndexedSeq[Set[(Index, Index)]]) {
+case class Graph[V](
+  values: IndexedSeq[V],
+  edges: IndexedSeq[Set[(Index, Index)]]
+) {
   val indices: IndexedSeq[Index] =
     0 until values.size map Index.apply toIndexedSeq
 

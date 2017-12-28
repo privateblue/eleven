@@ -65,14 +65,20 @@ object JsGame {
   def directionOf(d: Int) = Direction(d)
 
   @JSExport
-  def emptyPickerOf(picker: js.Function1[IndexedSeq[Index], js.Promise[Index]]) =
+  def emptyPickerOf(
+    picker: js.Function1[IndexedSeq[Index], js.Promise[Index]]
+  ) =
     picker andThen (_.toFuture)
 
   @JSExport
-  def directionPickerOf(picker: js.Function2[Graph[Value], IndexedSeq[Direction], js.Promise[Index]]) =
+  def directionPickerOf(
+    picker: js.Function2[Graph[Value], IndexedSeq[Direction], js.Promise[Index]]
+  ) =
     { (g: Graph[Value], ds:  IndexedSeq[Direction]) => picker(g, ds).toFuture }
 
   @JSExport
-  def resultHandlerOf(picker: js.Function2[Graph[Value], IndexedSeq[Score], js.Promise[Unit]]) =
+  def resultHandlerOf(
+    picker: js.Function2[Graph[Value], IndexedSeq[Score], js.Promise[Unit]]
+  ) =
     { (g: Graph[Value], ss:  IndexedSeq[Score]) => picker(g, ss).toFuture }
 }

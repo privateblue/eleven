@@ -14,15 +14,23 @@ trait MapAccumulator {
   def set(out: Out, i: Index, v: Value): Out =
     out + (i -> v)
   def add(out1: Out, out2: Out): Out =
-    out1.keySet ++ out2.keySet map (k => k -> Order.max(get(out1, k), get(out2, k))) toMap
+    (out1.keySet ++ out2.keySet)
+      .map { k => k -> Order.max(get(out1, k), get(out2, k)) }
+      .toMap
   def combine(zero: Out, outs: Set[Out]): Out =
     outs.foldLeft(zero)(add)
 }
 
 trait NonEmptyValueSearch {
-  implicit def toDogsSet[T: Order](xs: Set[T]): dogs.Set[T] = dogs.Set.fromList(xs.toList)
+  implicit def toDogsSet[T: Order](xs: Set[T]): dogs.Set[T] =
+    dogs.Set.fromList(xs.toList)
 
-  def values(col: Color, dir: Direction, graph: Graph[Value], index: Index): dogs.Set[Value] =
+  def values(
+    col: Color,
+    dir: Direction,
+    graph: Graph[Value],
+    index: Index
+  ): dogs.Set[Value] =
     graph.direction(dir).from(index).map {
       case i if graph.at(i) === Value.empty =>
         val cvs = values(col, dir, graph, i)
@@ -47,21 +55,23 @@ object WriteBackReducer extends MapAccumulator with NonEmptyValueSearch {
       val f = if (splitb || foreign) p.size - 1 else focus
       val focused = p(f)
       val fv = get(out, focused)
+      val stay = if (mergeb) p.size else f
+      val step = if (mergeb) p.size else f + 1
       if (v === Value.empty) {
-        val cs = dag.from(i).map(c => reduce0(c, out, p, if (mergeb) p.size else f))
+        val cs = dag.from(i).map(c => reduce0(c, out, p, stay))
         combine(out, cs)
       } else if (fv === Value.empty) {
         val updated = set(out, focused, v)
-        val cs = dag.from(i).map(c => reduce0(c, updated, p, if (mergeb) p.size else f))
+        val cs = dag.from(i).map(c => reduce0(c, updated, p, stay))
         combine(updated, cs)
       } else if (fv === v) {
         val updated = set(out, focused, v.next.paint(col))
-        val cs = dag.from(i).map(c => reduce0(c, updated, p, if (mergeb) p.size else f + 1))
+        val cs = dag.from(i).map(c => reduce0(c, updated, p, step))
         combine(updated, cs)
       } else {
         val nf = p.drop(f + 1).headOption.getOrElse(i)
         val updated = set(out, nf, v)
-        val cs = dag.from(i).map(c => reduce0(c, updated, p, if (mergeb) p.size else f + 1))
+        val cs = dag.from(i).map(c => reduce0(c, updated, p, step))
         combine(updated, cs)
       }
     }
