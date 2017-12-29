@@ -25,4 +25,22 @@ object Graphs {
       .update(IndexedSeq.fill(16)(Value.empty))
       .add(right).add(left).add(down).add(up)
   }
+
+  val twoByTwo = {
+    val right = DAG.empty
+      .add(Set()).add(Set(0))
+      .add(Set()).add(Set(2))
+
+    val left = right.inverted
+
+    val down = DAG.empty
+      .add(Set()).add(Set())
+      .add(Set(0)).add(Set(1))
+
+    val up = down.inverted
+
+    Graph.empty[Value]
+      .update(IndexedSeq.fill(4)(Value.empty))
+      .add(right).add(left).add(down).add(up)
+  }
 }

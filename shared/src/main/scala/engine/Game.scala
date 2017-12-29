@@ -85,43 +85,46 @@ object Game {
       player: Player,
       graph: Graph[Value],
       scores: IndexedSeq[Score],
-      depth: Int
+      depth: Int = 0
     ): (Option[Index], Option[Direction], IndexedSeq[Score]) = {
       val elevs = elevens(graph)
-      val moves = 0 until players flatMap (c => reducibles(Color(c), graph))
-      if (elevs.size > 0)
-        (None, None, scores.updated(elevs.head.p, Score.Max))
-      else if (depth == 0 || (empties(graph).size == 0 && moves.size == 0))
-        (None, None, scores)
+      if (elevs.size > 0) (None, None, scores.updated(elevs.head.p, Score.Max))
+      else if (depth >= 2) (None, None, scores)
       else {
         val color = Color(player.p)
         val starter = Value.empty.paint(color).next
         val next = Player((player.p + 1) % players)
-        val es = empties(graph)
-        val put =
-          if (!es.isEmpty) es.map(e => Some(e) -> graph.set(e, starter))
-          else IndexedSeq(None -> graph)
-        val childScores = for {
-          (e, gp) <- put
-          reds = reducibles(color, gp)
-          reduced =
-            if (!reds.isEmpty)
-              reds.map(d => Some(d) -> WriteBackReducer.reduce(color, d, gp))
-            else
-              IndexedSeq(None -> gp)
-          (d, gr) <- reduced
-          added = updatedScores(scores, next, scored(gp, gr))
-          (_, _, ss) = best(next, gr, added, depth - 1)
-        } yield (e, d, ss)
-        childScores
-          // sort by player's score minus sum of other players' score
-          .sortBy { case (e, d, ss) => 2 * ss(player.p).s - ss.map(_.s).sum }
-          .head
+        val p = graph.indices.collect {
+          case i if graph.at(i) == Value.empty => Some(i) -> graph.set(i, starter)
+        }
+        val put = if (p.isEmpty) IndexedSeq(None -> graph) else p
+        val childScores = put.flatMap { case (e, gp) =>
+          val reds = 0.until(gp.edges.size).flatMap { dir =>
+            val d = Direction(dir)
+            val gr = WriteBackReducer.reduce(color, d, gp)
+            if (gr.values != gp.values) IndexedSeq(Some(d) -> gr) else IndexedSeq()
+          }
+          val reduced = if (reds.isEmpty) IndexedSeq(None -> gp) else reds
+          reduced.map { case (d, gr) =>
+            val added = updatedScores(scores, player, scored(gp, gr))
+            //println(("\t" * depth) + s"depth $depth player ${player.p} empty ${e.map(_.i)} dir ${d.map(_.d)} scores $added")
+            val (_, _, ss) = best(next, gr, added, depth + 1)
+            (e, d, ss, evaluate(player, ss))
+          }
+        }
+        // sort desc, so top is at head
+        val (e, d, ss, _) = childScores.sortBy(-_._4).head
+        (e, d, ss)
       }
     }
+    def evaluate(player: Player, scores: IndexedSeq[Score]): Int =
+      // player's score minus sum of other players' score
+      2 * scores(player.p).s - scores.map(_.s).sum
 
     val player = Player(state.history.size % players)
-    val (e, d, _) = best(player, state.graph, state.scores, 1)
+    val f = System.currentTimeMillis
+    val (e, d, _) = best(player, state.graph, state.scores)
+    println(System.currentTimeMillis - f)
     move(
       state = state,
       // if e is None, emptyPicker won't be called at all

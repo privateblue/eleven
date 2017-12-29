@@ -28,28 +28,29 @@ object OriginalConsole {
       val player = n % players
       println(s"\n\n\n$n. move by ${colors(player)}Player $player${Console.RESET}:")
       println(board(graph))
-      val next = Game.move(
-        state = con,
-        emptyPicker = { es =>
-          pickEmpty(es)
-        },
-        directionPicker = { (put, dirs) =>
-          println(board(put))
-          pickDirection(dirs)
-        },
-        resultHandler = { (entry, graph, scores) =>
-          Future {
-            println(board(graph))
-            println(display(scores))
-          }
+      val emptyPicker: Game.EmptyPicker = { es =>
+        pickEmpty(es)
+      }
+      val directionPicker: Game.DirectionPicker = { (put, dirs) =>
+        println(board(put))
+        pickDirection(dirs)
+      }
+      val resultHandler: Game.ResultHandler = { (entry, graph, scores) =>
+        Future {
+          println(historyEntry(entry))
+          println(board(graph))
+          println(display(scores))
         }
-      )
+      }
+      val next =
+        if (player != 0) Game.bestMove(con, resultHandler)
+        else Game.move(con, emptyPicker, directionPicker, resultHandler)
       next.flatMap(move)
-    case NoMoreMoves(winner, graph, history, scores) => Future {
+    case NoMoreMoves(winner, graph, history, scores) => Future.successful {
       println(s"\nNo valid moves left - ${colors(winner.p)}Player ${winner.p}${Console.RESET} WINS")
       println(s"Final score: ${display(scores)}")
     }
-    case Eleven(winner, graph, history, scores) => Future {
+    case Eleven(winner, graph, history, scores) => Future.successful {
       println(s"\nELEVEN - ${colors(winner.p)}Player ${winner.p}${Console.RESET} WINS")
     }
   }
@@ -90,6 +91,13 @@ object OriginalConsole {
         case Value(v, Some(Color(c))) => s"${colors(c)}$v${Console.RESET}"
         case Value(v, _) => s"$v"
       }
-      .sliding(4, 4).map(_.mkString(" "))
+      .sliding(4, 4).map(_.mkString(" ")) // original
+      //.sliding(2, 2).map(_.mkString(" ")) // twoByTwo
       .mkString("\n", "\n", "")
+
+  def historyEntry(entry: Game.HistoryEntry): String = {
+    val put = entry._1.map(_.i).getOrElse("no pick")
+    val dir = entry._2.map(_.d).getOrElse("no pick")
+    s"\nPut: $put, Dir: $dir"
+  }
 }
