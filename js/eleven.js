@@ -1,5 +1,5 @@
-const players = 3;
-const aiPlayers = [0,2];
+const players = 2;
+const aiPlayers = [1];
 
 const colorMap = [[0,0,255], [255,0,0], [0,255,0]];
 const directionKeyMap = [39, 37, 40, 38];

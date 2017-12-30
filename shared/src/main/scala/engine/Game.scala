@@ -77,7 +77,7 @@ object Game {
 
   def bestMove(state: Continued): Game.HistoryEntry = {
     val players = state.scores.size
-    val maxDepth = state.graph.values.size / math.max(1, empties(state.graph).size)
+    val maxDepth = 1 + (math.sqrt(state.graph.values.size) / math.sqrt(math.max(1, empties(state.graph).size))).toInt
     val noempty = Option.empty[Index]
     val nodir = Option.empty[Direction]
     val initscores = Vector.fill(players)(Double.MinValue)
@@ -123,14 +123,14 @@ object Game {
         }
         val reszero = (true, false, noempty, nodir, initscores, alpha)
         val (_, _, e, d, ss, _) = children.foldLeft(reszero) {
-          case ((first, break, be, bd, bs, a), (e, d, gr, added)) if break =>
-            (first, break, be, bd, bs, a)
-          case ((first, break, be, bd, bs, a), (e, d, gr, added)) =>
+          case ((first, prune, be, bd, bs, a), (e, d, gr, added)) if prune =>
+            (first, prune, be, bd, bs, a)
+          case ((first, prune, be, bd, bs, a), (e, d, gr, added)) =>
             val (_, _, ss) = hypermax(next, gr, added, a, depth + 1)
             if (a(player) < ss(player)) {
               val na = a.updated(player, ss(player))
               (false, na.sum >= 0, e, d, ss, na)
-            } else (false, break, be, bd, if (first) ss else bs, a)
+            } else (false, prune, be, bd, if (first) ss else bs, a)
         }
         (e, d, ss)
       }
