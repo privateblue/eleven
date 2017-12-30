@@ -80,6 +80,8 @@ object Game {
     resultHandler: ResultHandler
   )(implicit ec: ExecutionContext): Future[Game] = {
     val players = state.scores.size
+    val maxDepth = players * state.graph.values.size / math.max(1, empties(state.graph).size) + 1
+    println(s"MAX DEPTH: $maxDepth")
 
     def best(
       player: Player,
@@ -89,46 +91,60 @@ object Game {
     ): (Option[Index], Option[Direction], IndexedSeq[Score]) = {
       val elevs = elevens(graph)
       if (elevs.size > 0) (None, None, scores.updated(elevs.head.p, Score.Max))
-      else if (depth >= 2) (None, None, scores)
+      else if (depth >= maxDepth) (None, None, scores)
       else {
         val color = Color(player.p)
         val starter = Value.empty.paint(color).next
         val next = Player((player.p + 1) % players)
-        val p = graph.indices.collect {
-          case i if graph.at(i) == Value.empty => Some(i) -> graph.set(i, starter)
-        }
-        val put = if (p.isEmpty) IndexedSeq(None -> graph) else p
-        val childScores = put.flatMap { case (e, gp) =>
-          val reds = 0.until(gp.edges.size).flatMap { dir =>
-            val d = Direction(dir)
-            val gr = WriteBackReducer.reduce(color, d, gp)
-            if (gr.values != gp.values) IndexedSeq(Some(d) -> gr) else IndexedSeq()
+        val (_, pute, putd, putss, _) =
+          graph.values.foldLeft((0, Option.empty[Index], Option.empty[Direction], IndexedSeq.empty[Score], Int.MinValue)) {
+            case ((i, be, bd, bs, beval), v) if v == Value.empty =>
+              val e = Index(i)
+              val gp = graph.set(e, starter)
+              val (redd, redss, redeval) =
+                0.until(gp.edges.size).foldLeft((Option.empty[Direction], IndexedSeq.empty[Score], Int.MinValue)) {
+                  case ((bbd, bbs, bbeval), dir) =>
+                    val d = Direction(dir)
+                    val gr = WriteBackReducer.reduce(color, d, gp)
+                    if (gr.values == gp.values) (bbd, bbs, bbeval)
+                    else {
+                      val added = updatedScores(scores, player, scored(gp, gr))
+                      //println(("\t" * depth) + s"depth $depth player ${player.p} empty $i dir $dir scores $added")
+                      val (_, _, ss) = best(next, gr, added, depth + 1)
+                      val eval = evaluate(player, ss)
+                      if (eval > bbeval) (Some(d), ss, eval) else (bbd, bbs, bbeval)
+                    }
+                }
+              val (d, ss, eval) =
+                if (redd.isDefined) (redd, redss, redeval)
+                else {
+                  //println(("\t" * depth) + s"depth $depth player ${player.p} empty $i dir no dir scores $scores")
+                  val (_, _, noredss) = best(next, gp, scores, depth + 1)
+                  val noredeval = evaluate(player, noredss)
+                  (None, noredss, noredeval)
+                }
+              if (eval > beval) (i + 1, Some(e), d, ss, eval)
+              else (i + 1, be, bd, bs, beval)
+            case ((i, be, bd, bs, beval), v) =>
+              (i + 1, be, bd, bs, beval)
           }
-          val reduced = if (reds.isEmpty) IndexedSeq(None -> gp) else reds
-          reduced.map { case (d, gr) =>
-            val added = updatedScores(scores, player, scored(gp, gr))
-            //println(("\t" * depth) + s"depth $depth player ${player.p} empty ${e.map(_.i)} dir ${d.map(_.d)} scores $added")
-            val (_, _, ss) = best(next, gr, added, depth + 1)
-            (e, d, ss, evaluate(player, ss))
-          }
+        if (pute.isDefined) (pute, putd, putss)
+        else {
+          //println(("\t" * depth) + s"depth $depth player ${player.p} empty no empty dir no dir scores $scores")
+          val (_, _, noputss) = best(next, graph, scores, depth + 1)
+          (None, None, noputss)
         }
-        // sort desc, so top is at head
-        val (e, d, ss, _) = childScores.sortBy(-_._4).head
-        (e, d, ss)
       }
     }
     def evaluate(player: Player, scores: IndexedSeq[Score]): Int =
-      // player's score minus sum of other players' score
       2 * scores(player.p).s - scores.map(_.s).sum
 
     val player = Player(state.history.size % players)
-    val f = System.currentTimeMillis
+    val s = System.currentTimeMillis
     val (e, d, _) = best(player, state.graph, state.scores)
-    println(System.currentTimeMillis - f)
+    println(s"MOVE TIME: ${System.currentTimeMillis - s}")
     move(
       state = state,
-      // if e is None, emptyPicker won't be called at all
-      // same applies to d and directionPicker
       emptyPicker = _ => Future.successful(e.get),
       directionPicker = (_, _) => Future.successful(d.get),
       resultHandler = resultHandler
