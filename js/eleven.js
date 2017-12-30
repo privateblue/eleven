@@ -1,8 +1,9 @@
-var players = 2;
+const players = 3;
+const aiPlayers = [0,2];
 
-var colorMap = [[0,0,255], [255,0,0], [0,255,0]];
-var directionKeyMap = [39, 37, 40, 38];
-var directionSymbolMap = ['→', '←', '↓', '↑'];
+const colorMap = [[0,0,255], [255,0,0], [0,255,0]];
+const directionKeyMap = [39, 37, 40, 38];
+const directionSymbolMap = ['→', '←', '↓', '↑'];
 var circles = [];
 var wobbles = [];
 var arrows = [];
@@ -19,12 +20,23 @@ move(start);
 function move(g) {
   var game = Game.gameToJs(g);
   if (game.state == 'continued') {
-    var emptyPicker = Game.emptyPickerOf(pickEmpty);
-    var directionPicker = Game.directionPickerOf(pickDirection);
+    var humanEmptyPicker = Game.emptyPickerOf(pickEmpty);
+    var humanDirectionPicker = Game.directionPickerOf(pickDirection);
     var resultHandler = Game.resultHandlerOf(handleResult);
-    if (player == 1) var next = Game.aiMove(g, resultHandler);
-    else var next = Game.move(g, emptyPicker, directionPicker, resultHandler);
-    //var next = Game.moveWithRandomEmpty(g, directionPicker, resultHandler);
+    if (aiPlayers.includes(player)) {
+      var bm = Game.bestMove(g, resultHandler);
+      var best = Game.historyEntryToJs(bm);
+      var emptyPicker = Game.emptyPickerOf(function(es) {
+        return new Promise((res, rej) => res(Game.indexOf(best.put)));
+      });
+      var directionPicker = Game.directionPickerOf(function(graph, ds) {
+        return new Promise(function(res, rej) {
+          updateBoard(graph);
+          setTimeout(() => res(Game.directionOf(best.dir)), 200);
+        });
+      });
+      var next = Game.move(g, emptyPicker , directionPicker, resultHandler);
+    } else var next = Game.move(g, humanEmptyPicker, humanDirectionPicker, resultHandler);
     Game.nextToJs(next).then(n => setTimeout(() => move(n), 200));
   } else if (game.state == 'nomoremoves') {
     console.log('no more valid moves');

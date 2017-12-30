@@ -35,10 +35,7 @@ object JsGame {
   ) = Game.move(state, Game.randomEmptyPicker, directionPicker, resultHandler)
 
   @JSExport
-  def aiMove(
-    state: Continued,
-    resultHandler: Game.ResultHandler
-  ) = Game.bestMove(state, resultHandler)
+  def bestMove(state: Continued) = Game.bestMove(state)
 
   @JSExport
   def gameToJs(game: Game) = ToJs.to(game)

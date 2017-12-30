@@ -16,6 +16,7 @@ object OriginalConsole {
   val colors = IndexedSeq(Console.RED, Console.GREEN, Console.BLUE)
 
   val players = 2
+  val aiPlayers = List(0)
 
   def main(args: Array[String]): Unit = {
     val started = Game.start(Graphs.original, players)
@@ -26,25 +27,25 @@ object OriginalConsole {
     case con @ Continued(graph, history, scores) =>
       val n = history.size
       val player = n % players
-      println(s"\n\n\n$n. move by ${colors(player)}Player $player${Console.RESET}:")
-      println(board(graph))
-      val emptyPicker: Game.EmptyPicker = { es =>
-        pickEmpty(es)
-      }
-      val directionPicker: Game.DirectionPicker = { (put, dirs) =>
+      val humanEmptyPicker: Game.EmptyPicker = { es => pickEmpty(player, es) }
+      val humanDirectionPicker: Game.DirectionPicker = { (put, dirs) =>
         println(board(put))
-        pickDirection(dirs)
+        pickDirection(player, dirs)
       }
       val resultHandler: Game.ResultHandler = { (entry, graph, scores) =>
-        Future {
-          println(historyEntry(entry))
+        Future.successful {
           println(board(graph))
-          println(display(scores))
+          println(historyEntry(entry) + ", " + display(scores))
         }
       }
       val next =
-        if (player != 0) Game.bestMove(con, resultHandler)
-        else Game.move(con, emptyPicker, directionPicker, resultHandler)
+        if (aiPlayers.contains(player)) {
+          val (e, d) = Game.bestMove(con)
+          Game.move(con, _ => Future.successful(e.get), { (put, _) =>
+            println(board(put))
+            Future.successful(d.get)
+          }, resultHandler)
+        } else Game.move(con, humanEmptyPicker, humanDirectionPicker, resultHandler)
       next.flatMap(move)
     case NoMoreMoves(winner, graph, history, scores) => Future.successful {
       println(s"\nNo valid moves left - ${colors(winner.p)}Player ${winner.p}${Console.RESET} WINS")
@@ -55,22 +56,22 @@ object OriginalConsole {
     }
   }
 
-  def pickEmpty(es: IndexedSeq[Index]): Future[Index] = {
+  def pickEmpty(player: Int, es: IndexedSeq[Index]): Future[Index] = {
     val ask = Try {
-      StdIn.readLine(s"""\nPick an empty for 1 (${es.map(_.i).mkString(", ")}) > """)
+      StdIn.readLine(s"""\n${colors(player)}Player $player${Console.RESET} Pick empty (${es.map(_.i).mkString(", ")}) > """)
         .toInt
     }
     ask.map(Index.apply) match {
       case Success(i) if es.contains(i) => Future.successful(i)
-      case _ => pickEmpty(es)
+      case _ => pickEmpty(player, es)
     }
   }
 
-  def pickDirection(dirs: IndexedSeq[Direction]): Future[Direction] = {
-    val ask = Try(StdIn.readLine(s"\nDirection (${directions(dirs)}) > ").toInt)
+  def pickDirection(player: Int, dirs: IndexedSeq[Direction]): Future[Direction] = {
+    val ask = Try(StdIn.readLine(s"\n${colors(player)}Player $player${Console.RESET} Direction (${directions(dirs)}) > ").toInt)
     ask.map(Direction.apply) match {
       case Success(d) if dirs.contains(d) => Future.successful(d)
-      case _ => pickDirection(dirs)
+      case _ => pickDirection(player, dirs)
     }
   }
 
