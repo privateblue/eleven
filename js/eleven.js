@@ -7,15 +7,15 @@ const directionSymbolMap = ['→', '←', '↓', '↑'];
 
 const width = window.innerWidth;
 const height = window.innerHeight;
-const size = Math.min(width, height);                 // shorter side of screen
-const cx = Math.round(width / 2);                     // horizontal center of screen
-const cy = Math.round(height / 2);                    // vertical center of screen
-const r = Math.round(size / 25);                      // initial radius of value circle
-const str = Math.round(r / 3);                        // base stroke width factor
-const s = Math.round(2.5 * r);                        // spacing factor btw value circles
-const scoreY = Math.round(1.5 * r);                   // score bar vertical position
+const size = Math.min(width, height);                     // shorter side of screen
+const cx = Math.round(width / 2);                         // horizontal center of screen
+const cy = Math.round(height / 2);                        // vertical center of screen
+const r = Math.round(size / 25);                          // initial radius of value circle
+const str = Math.round(r / 3);                            // base stroke width factor
+const s = Math.round(2.5 * r);                            // spacing factor btw value circles
+const scoreY = Math.round(1.5 * r);                       // score bar vertical position
 const scoreW = Math.round(width / players / 2 - 2 * str); // spacing of score bar elements
-const fontSize = Math.round(r / 2);                   // font size
+const fontSize = Math.round(r / 2);                       // font size
 
 var circles = [];
 var wobbles = [];
@@ -136,17 +136,20 @@ function updateScores(ss, he) {
   var scores = Game.scoresToJs(ss);
   var entry = Game.historyEntryToJs(he);
 
+  var cur = scoreBar.getChildren(c => c.getName() == 'gombocka-' + n)[0];
+  var nxt = scoreBar.getChildren(c => c.getName() == 'gombocka-' + (n + 1))[0];
+
   var scr = scoreBar.getChildren(c => c.getName() == 'score-' + n)[0];
   scr.setAttr('text', '' + scores[player]);
   scr.setOffset({ x: scr.getWidth() / 2, y: 0 });
 
   var lastm = scoreBar.getChildren(c => c.getName() == 'lastm-' + n)[0];
   if ('dir' in entry) lastm.setAttr('text', directionSymbolMap[entry.dir]);
-  lastm.setOffset({ x: scr.getWidth() / 2, y: 0 });
+  lastm.setOffset({ x: lastm.getWidth() / 2, y: 0 });
 
-  scoreBar.getChildren(c =>
-    c.getName() == 'gombocka-' + (n + 1) || c.getName() == 'line-' + n
-  ).forEach(c => c.opacity(1));
+  scoreBar
+    .getChildren(c => c.getName() == 'gombocka-' + (n + 1))
+    .forEach(c => c.opacity(1));
 
   appendScoreBar(players + n + 1);
 
@@ -155,6 +158,11 @@ function updateScores(ss, he) {
     easing: Konva.Easings.EaseInOut,
     duration: 0.5,
     x: (n + 1) * -scoreW,
+    onFinish: function() {
+      cur.strokeEnabled(false);
+      nxt.stroke('black');
+      nxt.strokeWidth(str / 2);
+    }
   });
   shift.play();
 }
@@ -168,7 +176,10 @@ function initBoard(g) {
   for (i = 0; i < players + 1; i++) {
     appendScoreBar(i)
   }
-  scoreBar.getChildren(c => c.getName() == 'gombocka-0')[0].opacity(1);
+  var cur = scoreBar.getChildren(c => c.getName() == 'gombocka-0')[0]
+  cur.opacity(1);
+  cur.stroke('black');
+  cur.strokeWidth(str / 2);
   layer.add(scoreBar);
 
   // circles
@@ -258,8 +269,6 @@ function appendScoreBar(i) {
     y: scoreY,
     radius: str,
     fill: color(colorMap[i % players]),
-    stroke: 'black',
-    strokeWidth: str / 2,
     opacity: 0.1
   });
   scoreBar.add(gombocka);
@@ -289,10 +298,10 @@ function appendScoreBar(i) {
   scoreBar.add(lastm);
   var line = new Konva.Line({
     name: 'line-' + i,
-    points: [cx + i * scoreW + str + 2, scoreY, cx + i * scoreW + scoreW - str - 2, scoreY],
+    points: [cx + i * scoreW + str, scoreY, cx + i * scoreW + scoreW - str, scoreY],
     fill: 'black',
     stroke: 'black',
-    strokeWidth: str / 2,
+    strokeWidth: 1,
     opacity: 0.1
   });
   scoreBar.add(line);
