@@ -72,8 +72,8 @@ object Game {
     }
   }
 
-  def randomEmptyPicker(es: IndexedSeq[Index]): Future[Index] =
-    Future.successful(Random.shuffle(es).head)
+  def randomEmpty(state: Continued): Game.HistoryEntry =
+    (Random.shuffle(empties(state.graph)).headOption, None)
 
   def bestMove(state: Continued): Game.HistoryEntry = {
     val players = state.scores.size

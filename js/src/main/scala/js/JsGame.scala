@@ -28,11 +28,7 @@ object JsGame {
   ) = Game.move(state, emptyPicker, directionPicker, resultHandler)
 
   @JSExport
-  def moveWithRandomEmpty(
-    state: Continued,
-    directionPicker: Game.DirectionPicker,
-    resultHandler: Game.ResultHandler
-  ) = Game.move(state, Game.randomEmptyPicker, directionPicker, resultHandler)
+  def randomEmpty(state: Continued) = Game.randomEmpty(state)
 
   @JSExport
   def bestMove(state: Continued) = Game.bestMove(state)

@@ -1,17 +1,32 @@
-const players = 2;
-const aiPlayers = [1];
+const players = 3;
+const machines = [];
 
 const colorMap = [[0,0,255], [255,0,0], [0,255,0]];
 const directionKeyMap = [39, 37, 40, 38];
 const directionSymbolMap = ['→', '←', '↓', '↑'];
+
+const width = window.innerWidth;
+const height = window.innerHeight;
+const size = Math.min(width, height);                 // shorter side of screen
+const cx = Math.round(width / 2);                     // horizontal center of screen
+const cy = Math.round(height / 2);                    // vertical center of screen
+const r = Math.round(size / 25);                      // initial radius of value circle
+const str = Math.round(r / 3);                        // base stroke width factor
+const s = Math.round(2.5 * r);                        // spacing factor btw value circles
+const scoreY = Math.round(1.5 * r);                   // score bar vertical position
+const scoreW = Math.round(width / players / 2 - 2 * str); // spacing of score bar elements
+const fontSize = Math.round(r / 2);                   // font size
+
 var circles = [];
 var wobbles = [];
-var arrows = [];
 var vals = [];
-var scrs = [];
-var player = 0;
 
-initBoard(players, Game.graphOriginal);
+var scoreBar;
+
+var player = 0;
+var n = 0;
+
+initBoard(Game.graphOriginal);
 updateBoard(Game.graphOriginal);
 
 var start = Game.start(Game.graphOriginal, players);
@@ -20,24 +35,28 @@ move(start);
 function move(g) {
   var game = Game.gameToJs(g);
   if (game.state == 'continued') {
-    var humanEmptyPicker = Game.emptyPickerOf(pickEmpty);
-    var humanDirectionPicker = Game.directionPickerOf(pickDirection);
-    var resultHandler = Game.resultHandlerOf(handleResult);
-    if (aiPlayers.includes(player)) {
-      var bm = Game.bestMove(g, resultHandler);
+    // single player moves
+    if (players == 1) {
+      var rm = Game.randomEmpty(g);
+      var random = Game.historyEntryToJs(rm);
+      var ep = es => new Promise((res, rej) => res(Game.indexOf(random.put)));
+      var dp = pickDirection;
+    // machine player moves
+    } else if (machines.includes(player)) {
+      var bm = Game.bestMove(g);
       var best = Game.historyEntryToJs(bm);
-      var emptyPicker = Game.emptyPickerOf(function(es) {
-        return new Promise((res, rej) => res(Game.indexOf(best.put)));
+      var ep = es => new Promise((res, rej) => res(Game.indexOf(best.put)));
+      var dp = (graph, ds) => new Promise(function(res, rej) {
+        updateBoard(graph);
+        setTimeout(() => res(Game.directionOf(best.dir)), 500);
       });
-      var directionPicker = Game.directionPickerOf(function(graph, ds) {
-        return new Promise(function(res, rej) {
-          updateBoard(graph);
-          setTimeout(() => res(Game.directionOf(best.dir)), 200);
-        });
-      });
-      var next = Game.move(g, emptyPicker , directionPicker, resultHandler);
-    } else var next = Game.move(g, humanEmptyPicker, humanDirectionPicker, resultHandler);
-    Game.nextToJs(next).then(n => setTimeout(() => move(n), 200));
+    // human player moves
+    } else {
+      var ep = pickEmpty;
+      var dp = pickDirection;
+    }
+    var next = Game.move(g, Game.emptyPickerOf(ep), Game.directionPickerOf(dp), Game.resultHandlerOf(handleResult));
+    Game.nextToJs(next).then(n => move(n));
   } else if (game.state == 'nomoremoves') {
     console.log('no more valid moves');
   } else if (game.state == 'eleven') {
@@ -76,10 +95,10 @@ function pickDirection(graph, directions) {
 
 function handleResult(entry, graph, scores) {
   updateBoard(graph);
-  updateScores(scores);
-  updateLastMove(entry);
+  updateScores(scores, entry);
   player = (player + 1) % players;
-  return new Promise((resolve, reject) => resolve());
+  n = n + 1;
+  return new Promise((resolve, reject) => setTimeout(() => resolve(), 500));
 }
 
 function updateBoard(g) {
@@ -88,11 +107,13 @@ function updateBoard(g) {
   for (i = 0; i < graph.values.length; i++) {
     if ("c" in graph.values[i]) {
       var c = colorMap[graph.values[i].c].slice();
-      if (graph.values[i].v != 0) c.push(graph.values[i].v / 10);
+      if (graph.values[i].v != 0) c.push(0.5/*graph.values[i].v / 10*/);
+      circles[i].radius((1 + graph.values[i].v / 10) * r);
       circles[i].fill(color(c));
       circles[i].draw();
     } else {
-      circles[i].fill('white');
+      circles[i].radius(r);
+      circles[i].fill(color([255,255,255,0]));
       circles[i].draw();
     }
     wobbles[i] = new Konva.Tween({
@@ -106,109 +127,76 @@ function updateBoard(g) {
     var increasedValue = graph.values[i].v > parseInt(vals[i].getAttr('text'));
     if (newValue || increasedValue) wobbles[i].play();
     vals[i].setAttr('text', graph.values[i].v);
-    vals[i].setOffset({x: vals[i].getWidth() / 2, y: vals[i].getHeight() / 2});
     vals[i].visible(graph.values[i].v != 0);
     vals[i].draw();
   }
 }
 
-function updateScores(scores) {
-  var ss = Game.scoresToJs(scores);
-  for (i = 0; i < ss.length; i++) {
-    scrs[i].bkg.draw();
-    scrs[i].scr.setAttr('text', '' + ss[i]);
-    scrs[i].scr.setOffset({
-      x: scrs[i].scr.getWidth() / 2,
-      y: scrs[i].scr.getHeight() / 2
-    });
-    scrs[i].scr.draw();
-  }
+function updateScores(ss, he) {
+  var scores = Game.scoresToJs(ss);
+  var entry = Game.historyEntryToJs(he);
+
+  var scr = scoreBar.getChildren(c => c.getName() == 'score-' + n)[0];
+  scr.setAttr('text', '' + scores[player]);
+  scr.setOffset({ x: scr.getWidth() / 2, y: 0 });
+
+  var lastm = scoreBar.getChildren(c => c.getName() == 'lastm-' + n)[0];
+  if ('dir' in entry) lastm.setAttr('text', directionSymbolMap[entry.dir]);
+  lastm.setOffset({ x: scr.getWidth() / 2, y: 0 });
+
+  scoreBar.getChildren(c =>
+    c.getName() == 'gombocka-' + (n + 1) || c.getName() == 'line-' + n
+  ).forEach(c => c.opacity(1));
+
+  appendScoreBar(players + n + 1);
+
+  var shift = new Konva.Tween({
+    node: scoreBar,
+    easing: Konva.Easings.EaseInOut,
+    duration: 0.5,
+    x: (n + 1) * -scoreW,
+  });
+  shift.play();
 }
 
-function updateLastMove(entry) {
-  var he = Game.historyEntryToJs(entry);
-  scrs[player].last.setAttr('text', '');
-  scrs[player].last.draw();
-  if ('dir' in he) scrs[player].last.setAttr('text', directionSymbolMap[he.dir]);
-}
-
-function initBoard(p, g) {
+function initBoard(g) {
   var graph = Game.graphToJs(g);
-
-  var width = window.innerWidth;
-  var height = window.innerHeight;
-  var size = Math.min(width, height);
-
-  var cx = Math.round(width / 2);
-  var cy = Math.round(height / 2);
-  var r = Math.round(size / 15);
-  var str = Math.round(r / 10);
-  var s = Math.round(r * 3 / 2);
-  var scrw = Math.round((6 * s + 2 * r) / (p + 1));
-  var scrr = Math.round(r / 2);
-  var scrr2 = Math.round(scrr / 3 * 4);
-
   var layer = new Konva.Layer();
 
   // scores
-  for (i = 0; i < p; i++) {
-    var star = new Konva.Star({
-      x: cx - (3 * s) - r + (i + 1) * scrw,
-      y: cy - (3 * s) - 4 * scrr,
-      numPoints: 7,
-      innerRadius: scrr,
-      outerRadius: scrr2,
-      fill: color(colorMap[i])
-    });
-    var scr = new Konva.Text({
-      x: cx - (3 * s) - r + (i + 1) * scrw,
-      y: cy - (3 * s) - 4 * scrr,
-      text: '0',
-      fontFamily: 'Dosis',
-      fontSize: scrr,
-      fill: 'white'
-    });
-    scr.setOffset({x: scr.getWidth() / 2, y: scr.getHeight() / 2});
-    var last = new Konva.Text({
-      x: cx - (3 * s) - r + (i + 1) * scrw + star.getWidth() - scrr,
-      y: cy - (3 * s) - 4.5 * scrr,
-      text: '',
-      fontFamily: 'Dosis',
-      fontStyle: 'bold',
-      fontSize: scrr,
-      fill: 'black'
-    });
-    scrs.push({bkg: star, scr: scr, last: last});
-    layer.add(star);
-    layer.add(scr);
-    layer.add(last);
+  scoreBar = new Konva.Group({});
+  for (i = 0; i < players + 1; i++) {
+    appendScoreBar(i)
   }
-  var rotate = new Konva.Animation(function(frame) {
-    scrs[player].bkg.rotate(frame.timeDiff / 10);
-  }, layer);
-  rotate.start();
+  scoreBar.getChildren(c => c.getName() == 'gombocka-0')[0].opacity(1);
+  layer.add(scoreBar);
 
   // circles
   for (y = cy - (3 * s); y <= cy + (3 * s); y = y + s + s) {
     for (x = cx - (3 * s); x <= cx + (3 * s); x = x + s + s) {
+      var n = new Konva.Circle({
+        x: x,
+        y: y,
+        radius: str,
+        fill: 'black'
+      });
+      layer.add(n);
       var c = new Konva.Circle({
         x: x,
         y: y,
         radius: r,
-        stroke: 'black',
-        strokeWidth: str
+        fill: color([255,255,255,0])
       });
       circles.push(c);
       layer.add(c);
       var t = new Konva.Text({
-        x: x,
-        y: y,
+        x: x + str,
+        y: y - r / 2 - str,
         text: '0',
         fontFamily: 'Dosis',
         fontStyle: 'bold',
-        fontSize: r
+        fontSize: fontSize
       });
-      t.setOffset({x: t.getWidth() / 2, y: t.getHeight() / 2});
       t.visible(false);
       vals.push(t);
       layer.add(t);
@@ -217,7 +205,6 @@ function initBoard(p, g) {
 
   // arrows
   for (d = 0; d < graph.edges.length; d++) {
-    arrows.push([]);
     for (e = 0; e < graph.edges[d].length; e++) {
       var edge = graph.edges[d][e];
       var from = circles[edge.from];
@@ -229,13 +216,13 @@ function initBoard(p, g) {
       var a = new Konva.Arrow({
         points: arrowPoints(x1, y1, x2, y2, r, str),
         tension: 1,
-        pointerLength: str * 2,
-        pointerWidth: str * 2,
+        pointerLength: str,
+        pointerWidth: str / 2,
         fill: 'black',
         stroke: 'black',
-        strokeWidth: 1
+        strokeWidth: 1,
+        opacity: 0.1
       });
-      arrows[d].push(a);
       layer.add(a);
     }
   }
@@ -251,17 +238,64 @@ function initBoard(p, g) {
 function arrowPoints(x1, y1, x2, y2, r, str) {
   if (x1 === x2 && y1 > y2) {
     // up
-    return [x1, y1 - r, x2, y2 + r + str / 2];
+    return [x1, y1 - str, x2, y2 + str];
   } else if (x1 === x2 && y2 > y1) {
     // down
-    return [x1, y1 + r, x2, y2 - r - str / 2];
+    return [x1, y1 + str, x2, y2 - str];
   } else if (y1 === y2 && x1 > x2) {
     // left
-    return [x1 - r, y1, x2 + r + str / 2, y2];
+    return [x1 - str, y1, x2 + str, y2];
   } else if (y1 === y2 && x2 > x1) {
     // right
-    return [x1 + r, y1, x2 - r - str / 2, y2];
+    return [x1 + str, y1, x2 - str, y2];
   }
+}
+
+function appendScoreBar(i) {
+  var gombocka = new Konva.Circle({
+    name: 'gombocka-' + i,
+    x: cx + i * scoreW,
+    y: scoreY,
+    radius: str,
+    fill: color(colorMap[i % players]),
+    stroke: 'black',
+    strokeWidth: str / 2,
+    opacity: 0.1
+  });
+  scoreBar.add(gombocka);
+  var score = new Konva.Text({
+    name: 'score-' + i,
+    x: cx + i * scoreW,
+    y: scoreY - r / 2 - 2 * str,
+    text: '',
+    fontFamily: 'Dosis',
+    fontStyle: 'bold',
+    fontSize: fontSize,
+    fill: 'black'
+  });
+  score.setOffset({x: score.getWidth() / 2, y: 0});
+  scoreBar.add(score);
+  var lastm = new Konva.Text({
+    name: 'lastm-' + i,
+    x: cx + i * scoreW,
+    y: scoreY + 2 * str,
+    text: '',
+    fontFamily: 'Dosis',
+    fontStyle: 'bold',
+    fontSize: fontSize,
+    fill: 'black'
+  });
+  lastm.setOffset({x: lastm.getWidth() / 2, y: 0});
+  scoreBar.add(lastm);
+  var line = new Konva.Line({
+    name: 'line-' + i,
+    points: [cx + i * scoreW + str + 2, scoreY, cx + i * scoreW + scoreW - str - 2, scoreY],
+    fill: 'black',
+    stroke: 'black',
+    strokeWidth: str / 2,
+    opacity: 0.1
+  });
+  scoreBar.add(line);
 }
 
 function color(arr) {
