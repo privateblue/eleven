@@ -18,7 +18,6 @@ const scoreW = Math.round(width / players / 2 - 2 * str); // spacing of score ba
 const fontSize = Math.round(r / 2);                       // font size
 
 var circles = [];
-var wobbles = [];
 var vals = [];
 
 var scoreBar;
@@ -104,33 +103,20 @@ function handleResult(entry, graph, scores) {
 
 function updateBoard(g) {
   var graph = Game.graphToJs(g);
-  wobbles.forEach(t => t.reset());
   for (i = 0; i < graph.values.length; i++) {
     if ("c" in graph.values[i]) {
       var c = colorMap[graph.values[i].c].slice();
-      if (graph.values[i].v != 0) c.push(0.5/*graph.values[i].v / 10*/);
+      c.push(0.5);
       circles[i].radius((1 + graph.values[i].v / 10) * r);
       circles[i].fill(color(c));
-      circles[i].draw();
     } else {
       circles[i].radius(r);
       circles[i].fill(color([255,255,255,0]));
-      circles[i].draw();
     }
-    wobbles[i] = new Konva.Tween({
-      node: circles[i],
-      scaleX: 1.2,
-      scaleY: 1.2,
-      duration: 0.1,
-      onFinish: function() { this.reverse(); }
-    });
-    var newValue = !vals[i].visible() && graph.values[i].v != 0;
-    var increasedValue = graph.values[i].v > parseInt(vals[i].getAttr('text'));
-    if (newValue || increasedValue) wobbles[i].play();
     vals[i].setAttr('text', graph.values[i].v);
     vals[i].visible(graph.values[i].v != 0);
-    vals[i].draw();
   }
+  layer.draw();
 }
 
 function updateScores(ss, he) {
@@ -153,6 +139,10 @@ function updateScores(ss, he) {
     .getChildren(c => c.getName() == 'gombocka-' + (n + 1))
     .forEach(c => c.opacity(1));
 
+  scoreBar.getChildren(c =>
+    parseInt(c.getName().match(/\d+/i)[0]) < n - players
+  ).forEach(c => c.hide());
+
   appendScoreBar(players + n + 1);
 
   var shift = new Konva.Tween({
@@ -173,7 +163,6 @@ function gameOver(msg) {
     parseInt(c.getName().match(/\d+/i)[0]) >= n
   ).forEach(c => c.hide());
   scoreBar.getChildren(c => c.getName() == 'line-' + (n - 1))[0].hide();
-  layer.draw();
   var message = new Konva.Text({
     x: cx + (n - 1) * scoreW + 2 * str,
     y: scoreY,
@@ -185,7 +174,7 @@ function gameOver(msg) {
   });
   message.setOffset({x: 0, y: message.getHeight() / 2});
   scoreBar.add(message);
-  scoreBar.draw();
+  layer.draw();
 }
 
 function initBoard(g) {
