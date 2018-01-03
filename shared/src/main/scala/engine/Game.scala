@@ -170,5 +170,5 @@ object Game {
   }
 
   def leader(scores: IndexedSeq[Score]): Player =
-    Player(scores.indexOf(scores.map(_.s).max))
+    Player(scores.indexOf(scores.max))
 }

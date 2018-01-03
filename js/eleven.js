@@ -1,4 +1,4 @@
-const players = 3;
+const players = 1;
 const machines = [];
 
 const colorMap = [[0,0,255], [255,0,0], [0,255,0]];
@@ -22,6 +22,7 @@ var wobbles = [];
 var vals = [];
 
 var scoreBar;
+var layer;
 
 var player = 0;
 var n = 0;
@@ -58,9 +59,9 @@ function move(g) {
     var next = Game.move(g, Game.emptyPickerOf(ep), Game.directionPickerOf(dp), Game.resultHandlerOf(handleResult));
     Game.nextToJs(next).then(n => move(n));
   } else if (game.state == 'nomoremoves') {
-    console.log('no more valid moves');
+    gameOver('NO MORE VALID MOVES, PLAYER ' + game.winner + ' WINS WITH ' + game.scores[game.winner] + ' POINTS');
   } else if (game.state == 'eleven') {
-    console.log('eleven!');
+    gameOver('PLAYER ' + game.winner + ' WINS WITH ELEVEN');
   }
 }
 
@@ -137,6 +138,7 @@ function updateScores(ss, he) {
   var entry = Game.historyEntryToJs(he);
 
   var cur = scoreBar.getChildren(c => c.getName() == 'gombocka-' + n)[0];
+  cur.strokeEnabled(false);
   var nxt = scoreBar.getChildren(c => c.getName() == 'gombocka-' + (n + 1))[0];
 
   var scr = scoreBar.getChildren(c => c.getName() == 'score-' + n)[0];
@@ -159,7 +161,6 @@ function updateScores(ss, he) {
     duration: 0.5,
     x: (n + 1) * -scoreW,
     onFinish: function() {
-      cur.strokeEnabled(false);
       nxt.stroke('black');
       nxt.strokeWidth(str / 2);
     }
@@ -167,9 +168,30 @@ function updateScores(ss, he) {
   shift.play();
 }
 
+function gameOver(msg) {
+  scoreBar.getChildren(c =>
+    parseInt(c.getName().match(/\d+/i)[0]) >= n
+  ).forEach(c => c.hide());
+  scoreBar.getChildren(c => c.getName() == 'line-' + (n - 1))[0].hide();
+  layer.draw();
+  var message = new Konva.Text({
+    x: cx + (n - 1) * scoreW + 2 * str,
+    y: scoreY,
+    text: msg,
+    fontFamily: 'Dosis',
+    fontStyle: 'bold',
+    fontSize: fontSize,
+    fill: 'black'
+  });
+  message.setOffset({x: 0, y: message.getHeight() / 2});
+  scoreBar.add(message);
+  scoreBar.draw();
+}
+
 function initBoard(g) {
   var graph = Game.graphToJs(g);
-  var layer = new Konva.Layer();
+
+  layer = new Konva.Layer();
 
   // scores
   scoreBar = new Konva.Group({});
@@ -275,7 +297,7 @@ function appendScoreBar(i) {
   var score = new Konva.Text({
     name: 'score-' + i,
     x: cx + i * scoreW,
-    y: scoreY - r / 2 - 2 * str,
+    y: scoreY - fontSize - 2 * str,
     text: '',
     fontFamily: 'Dosis',
     fontStyle: 'bold',
