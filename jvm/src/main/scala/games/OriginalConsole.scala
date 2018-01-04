@@ -15,7 +15,7 @@ object OriginalConsole {
   val colors = IndexedSeq(Console.RED, Console.GREEN, Console.BLUE)
 
   val players = 2
-  val aiPlayers = List(0)
+  val machines = List(0, 1)
 
   def main(args: Array[String]): Unit = {
     val started = Game.start(Graphs.original, players)
@@ -38,7 +38,7 @@ object OriginalConsole {
         }
       }
       val next =
-        if (aiPlayers.contains(player)) {
+        if (machines.contains(player)) {
           val (e, d) = Game.bestMove(con)
           Game.move(con, _ => Future.successful(e.get), { (put, _) =>
             println(board(put))

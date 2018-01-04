@@ -1,21 +1,21 @@
 const players = 1;
-const machines = [];
+const machines = [0];
 
 const colorMap = [[81,134,198], [229,87,16], [190,255,117]];
+const names = ['blue', 'red', 'green']
 const directionKeyMap = [39, 37, 40, 38];
 const directionSymbolMap = ['→', '←', '↓', '↑'];
 
 const width = window.innerWidth;
 const height = window.innerHeight;
-const size = Math.min(width, height);           // shorter side of screen
-const cx = Math.round(width / 2);               // horizontal center of screen
-const cy = Math.round(height / 2);              // vertical center of screen
-const r = Math.round(size / 25);                // initial radius of value circle
-const str = Math.round(r / 3);                  // base stroke width factor
-const s = Math.round(2.5 * r);                  // spacing factor btw value circles
-const scoreY = Math.round(1.5 * r);             // score bar vertical position
-const fontSize = Math.round(r / 2);             // font size
-const delay = 200;                              // delay between moves
+const size = Math.min(width, height);       // shorter side of screen
+const cx = Math.round(width / 2);           // horizontal center of screen
+const cy = Math.round(height / 2);          // vertical center of screen
+const r = Math.round(size / 25);            // initial radius of value circle
+const str = Math.round(r / 3);              // base stroke width factor
+const s = Math.round(2.5 * r);              // spacing factor btw value circles
+const scoreY = Math.round(1.5 * r);         // score bar vertical position
+const fontSize = Math.round(r / 2);         // font size
 
 var circles = [];
 var vals = [];
@@ -29,7 +29,7 @@ initBoard(Game.graphOriginal);
 updateBoard(Game.graphOriginal);
 
 var start = Game.start(Game.graphOriginal, players);
-move(start);
+setTimeout(() => move(start), 200);
 
 function move(g) {
   var game = Game.gameToJs(g);
@@ -47,7 +47,7 @@ function move(g) {
       var ep = es => new Promise((res, rej) => res(Game.indexOf(best.put)));
       var dp = (graph, ds) => new Promise(function(res, rej) {
         updateBoard(graph);
-        setTimeout(() => res(Game.directionOf(best.dir)), delay);
+        setTimeout(() => res(Game.directionOf(best.dir)), 1000);
       });
     // human player moves
     } else {
@@ -57,9 +57,11 @@ function move(g) {
     var next = Game.move(g, Game.emptyPickerOf(ep), Game.directionPickerOf(dp), Game.resultHandlerOf(handleResult));
     Game.nextToJs(next).then(n => move(n));
   } else if (game.state == 'nomoremoves') {
-    gameOver('NO MORE VALID MOVES, PLAYER ' + game.winner + ' WINS WITH ' + game.scores[game.winner] + ' POINTS');
+    var msg = 'no more valid moves, ' + names[game.winner] + ' wins with ' + game.scores[game.winner] + ' points';
+    gameOver(msg.toUpperCase());
   } else if (game.state == 'eleven') {
-    gameOver('PLAYER ' + game.winner + ' WINS WITH ELEVEN');
+    var msg = names[game.winner] + ' wins with eleven';
+    gameOver(msg.toUpperCase());
   }
 }
 
@@ -96,7 +98,7 @@ function handleResult(entry, graph, scores) {
   updateBoard(graph);
   updateScores(scores, entry);
   player = (player + 1) % players;
-  return new Promise((resolve, reject) => setTimeout(() => resolve(), delay));
+  return new Promise((resolve, reject) => setTimeout(() => resolve(), 200));
 }
 
 function updateBoard(g) {
