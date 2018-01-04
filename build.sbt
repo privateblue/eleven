@@ -17,6 +17,8 @@ lazy val app = crossProject.in(file("."))
   ).jsConfigure(
     _ enablePlugins ScalaJSBundlerPlugin
   ).jvmSettings(
+    mainClass in assembly := Some("games.OriginalConsole"),
+    assemblyJarName in assembly := s"${name.value}.jar"
   )
 
 lazy val appJS = app.js
