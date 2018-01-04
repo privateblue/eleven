@@ -27,11 +27,11 @@ trait NonEmptyValueSearch {
 
   def values(
     col: Color,
-    dir: Direction,
+    dir: DAG,
     graph: Graph[Value],
     index: Index
   ): dogs.Set[Value] =
-    graph.direction(dir).from(index).map {
+    dir.from(index).map {
       case i if graph.at(i) === Value.empty =>
         val cvs = values(col, dir, graph, i)
         if (cvs.size == 1) cvs.toScalaSet.head else Value.empty
@@ -46,11 +46,11 @@ object WriteBackReducer extends MapAccumulator with NonEmptyValueSearch {
     def reduce0(i: Index, out: Out, path: IndexedSeq[Index], focus: Int): Out = {
       val v = graph.at(i)
       val foreign = v =!= Value.empty && v.c != Some(col)
-      val mergeb = values(col, dir, graph, i).size > 1
+      val mergeb = values(col, dag, graph, i).size > 1
       val splitb =
         dag.to(i)
           .filterNot(path.contains)
-          .exists(c => values(col, dir, graph, c).size > 1 || dag.ends.contains(c))
+          .exists(c => values(col, dag, graph, c).size > 1 || dag.ends.contains(c))
       val p = path :+ i
       val f = if (splitb || foreign) p.size - 1 else focus
       val focused = p(f)
