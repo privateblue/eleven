@@ -11,7 +11,6 @@ lazy val root = project.in(file(".")).aggregate(appJS, appJVM)
 lazy val app = crossProject.in(file("."))
   .settings(
     libraryDependencies ++= Seq(
-      "org.typelevel" %%% "cats-core" % "1.0.0-RC1",
       "org.scalatest" %% "scalatest" % "3.0.1" % "test"
     )
   ).jsSettings(

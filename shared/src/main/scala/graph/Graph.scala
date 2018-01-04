@@ -8,10 +8,10 @@ case class Graph[V](
   values: IndexedSeq[V],
   edges: IndexedSeq[Set[(Index, Index)]]
 ) {
-  val indices: IndexedSeq[Index] =
+  lazy val indices: IndexedSeq[Index] =
     0 until values.size map Index.apply toIndexedSeq
 
-  val directions: IndexedSeq[Direction] =
+  lazy val directions: IndexedSeq[Direction] =
     0 until edges.size map Direction.apply toIndexedSeq
 
   def add(dag: DAG): Graph[V] =

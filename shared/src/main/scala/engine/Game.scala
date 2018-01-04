@@ -56,8 +56,7 @@ object Game {
       dir <- if (!reds.isEmpty) directionPicker(put, reds).map(Option.apply)
              else Future.successful(None)
       entry = (e, dir)
-      reduced = dir.map(WriteBackReducer.reduce(color, _, put)).getOrElse(put)
-      score = scored(put, reduced)
+      (reduced, score) = dir.map(WriteBackReducer.reduce(color, _, put)).getOrElse((put, Score(0)))
       added = updatedScores(state.scores, next, score)
       _ <- resultHandler(entry, reduced, added)
       elevs = elevens(reduced)
@@ -77,7 +76,7 @@ object Game {
 
   def bestMove(state: Continued): Game.HistoryEntry = {
     val players = state.scores.size
-    val maxDepth = 1 + (math.sqrt(state.graph.values.size) / math.sqrt(math.max(1, empties(state.graph).size))).toInt
+    val maxDepth = 1 + math.round(math.sqrt(state.graph.values.size) / math.sqrt(math.max(1, empties(state.graph).size)))
     val noempty = Option.empty[Index]
     val nodir = Option.empty[Direction]
     val initscores = Vector.fill(players)(Double.MinValue)
@@ -112,10 +111,10 @@ object Game {
         val children = put.flatMap { case (e, gp) =>
           val reds = 0.until(gp.edges.size).toList.flatMap { dir =>
             val d = Direction(dir)
-            val gr = WriteBackReducer.reduce(color, d, gp)
+            val (gr, scored) = WriteBackReducer.reduce(color, d, gp)
             if (gr.values == gp.values) List()
             else {
-              val added = scores.updated(player, scored(gp, gr).s.toDouble)
+              val added = scores.updated(player, scored.s.toDouble)
               List((e, Some(d), gr, added))
             }
           }
@@ -147,7 +146,7 @@ object Game {
     graph.indices.filter(graph.at(_) == Value.empty)
 
   def reducibles(color: Color, g: Graph[Value]): IndexedSeq[Direction] =
-    g.directions.filter(WriteBackReducer.reduce(color, _, g).values != g.values)
+    g.directions.filter(WriteBackReducer.reduce(color, _, g)._1.values != g.values)
 
   def elevens(graph: Graph[Value]): IndexedSeq[Player] =
     graph.values.filter(_.eleven).flatMap(_.c).map(c => Player(c.c))
@@ -158,16 +157,6 @@ object Game {
     score: Score
   ): IndexedSeq[Score] =
     scores.updated(player.p, scores(player.p) + score)
-
-  def scored(prev: Graph[Value], cur: Graph[Value]): Score = {
-    val p = prev.values.map(_.v)
-    val c = cur.values.map(_.v)
-    val removed = p diff c
-    val appeared = c diff p
-    val appearedFrom = appeared.flatMap(v => IndexedSeq(v - 1, v - 1))
-    val s = appeared.sum + (removed diff appearedFrom sum)
-    Score(s)
-  }
 
   def leader(scores: IndexedSeq[Score]): Player =
     Player(scores.indexOf(scores.max))

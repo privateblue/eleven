@@ -5,15 +5,19 @@ object DAG {
 }
 
 case class DAG(next: Index, edges: Set[(Index, Index)]) {
-  val vertices: Set[Index] = edges.map(_._1) ++ edges.map(_._2)
+  lazy val vertices: Set[Index] = edges.map(_._1) ++ edges.map(_._2)
 
-  val sourceMap: Map[Index, Set[(Index, Index)]] = edges.groupBy(_._1)
+  lazy val sourceMap: Map[Index, Set[(Index, Index)]] = edges.groupBy(_._1)
 
-  val targetMap: Map[Index, Set[(Index, Index)]] = edges.groupBy(_._2)
+  lazy val targetMap: Map[Index, Set[(Index, Index)]] = edges.groupBy(_._2)
 
-  val starts: Set[Index] = sourceMap.keySet diff targetMap.keySet
+  lazy val sources: Map[Index, Set[Index]] = targetMap.map(e => e._1 -> e._2.map(_._1))
 
-  val ends: Set[Index] = targetMap.keySet diff sourceMap.keySet
+  lazy val targets: Map[Index, Set[Index]] = sourceMap.map(e => e._1 -> e._2.map(_._2))
+
+  lazy val starts: Set[Index] = sourceMap.keySet diff targetMap.keySet
+
+  lazy val ends: Set[Index] = targetMap.keySet diff sourceMap.keySet
 
   def add(neighbours: Set[Int] = Set.empty): DAG = {
     val es = edges ++ neighbours.filter(_ < next.i).map(Index(_) -> next)
@@ -24,10 +28,10 @@ case class DAG(next: Index, edges: Set[(Index, Index)]) {
     DAG(next, edges.map(e => (e._2, e._1)))
 
   def from(index: Index): Set[Index] =
-    targetMap.get(index).getOrElse(Set.empty).map(_._1)
+    sources.get(index).getOrElse(Set.empty)
 
   def to(index: Index): Set[Index] =
-    sourceMap.get(index).getOrElse(Set.empty).map(_._2)
+    targets.get(index).getOrElse(Set.empty)
 
   def before(root: Index): DAG = {
     def before0(r: Index): Set[(Index, Index)] =
