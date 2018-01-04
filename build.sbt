@@ -10,7 +10,10 @@ lazy val root = project.in(file(".")).aggregate(appJS, appJVM)
 
 lazy val app = crossProject.in(file("."))
   .settings(
-    libraryDependencies += "org.typelevel" %%% "cats-core" % "1.0.0-RC1"
+    libraryDependencies ++= Seq(
+      "org.typelevel" %%% "cats-core" % "1.0.0-RC1",
+      "org.scalatest" %% "scalatest" % "3.0.1" % "test"
+    )
   ).jsSettings(
     webpackBundlingMode := BundlingMode.LibraryOnly(),
     emitSourceMaps := false
