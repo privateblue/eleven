@@ -2,6 +2,8 @@ package engine
 
 import graph._
 
+case class Color(c: Int)
+
 case class Player(p: Int)
 
 object Score {

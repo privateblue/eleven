@@ -1,8 +1,9 @@
-const players = 1;
-const machines = [0];
-
+const players = 3;
+const machines = [0,2];
 const colorMap = [[81,134,198], [229,87,16], [190,255,117]];
 const names = ['blue', 'red', 'green']
+
+const graph = Eleven.graphOriginal;
 const directionKeyMap = [39, 37, 40, 38];
 const directionSymbolMap = ['→', '←', '↓', '↑'];
 
@@ -17,94 +18,111 @@ const s = Math.round(2.5 * r);              // spacing factor btw value circles
 const scoreY = Math.round(1.5 * r);         // score bar vertical position
 const fontSize = Math.round(r / 2);         // font size
 
-var circles = [];
-var vals = [];
-var scrs = [];
+let circles = [];
+let vals = [];
+let scrs = [];
 
-var layer;
+let layer;
+let msg;
 
-var player = 0;
+initBoard(graph);
 
-initBoard(Game.graphOriginal);
-updateBoard(Game.graphOriginal);
+let stored = localStorage.getItem('game');
+if (stored) {
+  let con = Eleven.gameOf(JSON.parse(stored));
+  move(con);
+} else {
+  let start = Eleven.start(graph, players);
+  move(start);
+}
 
-var start = Game.start(Game.graphOriginal, players);
-setTimeout(() => move(start), 200);
-
-function move(g) {
-  var game = Game.gameToJs(g);
+function move(gm) {
+  let game = Eleven.gameToJs(gm);
+  localStorage.setItem('game', JSON.stringify(game));
+  let player = game.history.length % players;
+  updateBoard(game.graph);
+  updateScores(game.scores, game.history, player);
+  message(names[player] + ' to pick an empty node');
   if (game.state == 'continued') {
+    let ep, dp;
+    let rh = (he, g, ss) => new Promise((resolve, reject) => resolve());
     // single player moves
     if (players == 1) {
-      var rm = Game.randomEmpty(g);
-      var random = Game.historyEntryToJs(rm);
-      var ep = es => new Promise((res, rej) => res(Game.indexOf(random.put)));
-      var dp = pickDirection;
+      let rm = Eleven.randomEmpty(gm);
+      let random = Eleven.historyEntryToJs(rm);
+      ep = es => new Promise((res, rej) => res(Eleven.indexOf(random.put)));
+      dp = function(g, ds) {
+        postPickEmptyUpdate(g, ds, player);
+        return pickDirection(g, ds);
+      };
     // machine player moves
     } else if (machines.includes(player)) {
-      var bm = Game.bestMove(g);
-      var best = Game.historyEntryToJs(bm);
-      var ep = es => new Promise((res, rej) => res(Game.indexOf(best.put)));
-      var dp = (graph, ds) => new Promise(function(res, rej) {
-        updateBoard(graph);
-        setTimeout(() => res(Game.directionOf(best.dir)), 1000);
+      let best = new Promise(function(resolve, reject) {
+        setTimeout(() => resolve(Eleven.historyEntryToJs(Eleven.bestMove(gm))), 200);
       });
+      ep = es => best.then(bm => new Promise((res, rej) => res(Eleven.indexOf(bm.put))));
+      dp = (g, ds) => best.then(bm => new Promise(function(resolve, reject) {
+        postPickEmptyUpdate(g, ds, player)
+        setTimeout(() => resolve(Eleven.directionOf(bm.dir)), 1000);
+      }));
     // human player moves
     } else {
-      var ep = pickEmpty;
-      var dp = pickDirection;
+      ep = pickEmpty;
+      dp = function(g, ds) {
+        postPickEmptyUpdate(g, ds, player);
+        return pickDirection(g, ds);
+      }
     }
-    var next = Game.move(g, Game.emptyPickerOf(ep), Game.directionPickerOf(dp), Game.resultHandlerOf(handleResult));
-    Game.nextToJs(next).then(n => move(n));
+    let next = Eleven.move(gm, Eleven.emptyPickerOf(ep), Eleven.directionPickerOf(dp), Eleven.resultHandlerOf(rh));
+    Eleven.nextToJs(next).then(n => move(n));
   } else if (game.state == 'nomoremoves') {
-    var msg = 'no more valid moves, ' + names[game.winner] + ' wins with ' + game.scores[game.winner] + ' points';
-    gameOver(msg.toUpperCase());
+    message('no more valid moves, ' + names[game.winner] + ' wins with ' + game.scores[game.winner] + ' points');
+    localStorage.removeItem('game');
   } else if (game.state == 'eleven') {
-    var msg = names[game.winner] + ' wins with eleven';
-    gameOver(msg.toUpperCase());
+    message(names[game.winner] + ' wins with eleven');
+    localStorage.removeItem('game');
   }
 }
 
 function pickEmpty(empties) {
-  var es = Game.emptiesToJs(empties);
+  let es = Eleven.emptiesToJs(empties);
   return new Promise(function(resolve, reject) {
-    for (i = 0; i < es.length; i++) {
+    for (let i = 0; i < es.length; i++) {
       circles[es[i]].on("click", function(evt) {
         circles.forEach(c => c.off("click"));
-        var index = circles.findIndex(c => c == this);
-        resolve(Game.indexOf(index));
+        let index = circles.findIndex(c => c == this);
+        resolve(Eleven.indexOf(index));
       });
     }
   });
 }
 
 function pickDirection(graph, directions) {
-  updateBoard(graph);
-  var dirs = Game.directionsToJs(directions);
-  var keys = dirs.map(d => directionKeyMap[d]);
+  let dirs = Eleven.directionsToJs(directions);
+  let keys = dirs.map(d => directionKeyMap[d]);
   return new Promise(function(resolve, reject) {
     document.addEventListener('keydown', function _handler(evt) {
       evt.preventDefault();
       if (keys.includes(evt.keyCode)) {
         document.removeEventListener('keydown', _handler, false);
-        var direction = directionKeyMap.indexOf(evt.keyCode);
-        resolve(Game.directionOf(direction));
+        let direction = directionKeyMap.indexOf(evt.keyCode);
+        resolve(Eleven.directionOf(direction));
       }
     }, false);
   });
 }
 
-function handleResult(entry, graph, scores) {
+function postPickEmptyUpdate(g, ds, p) {
+  let graph = Eleven.graphToJs(g);
+  let dirs = Eleven.directionsToJs(ds);
   updateBoard(graph);
-  updateScores(scores, entry);
-  player = (player + 1) % players;
-  return new Promise((resolve, reject) => setTimeout(() => resolve(), 200));
+  let syms = dirs.map(d => directionSymbolMap[d]);
+  message(names[p] + ' to press ' + syms.join(' or '));
 }
 
-function updateBoard(g) {
-  var graph = Game.graphToJs(g);
-  for (i = 0; i < graph.values.length; i++) {
-    if ("c" in graph.values[i]) {
+function updateBoard(graph) {
+  for (let i = 0; i < graph.values.length; i++) {
+    if (graph.values[i].c !== undefined) {
       circles[i].radius((1 + graph.values[i].v / 10) * r);
       circles[i].fill(color(colorMap[graph.values[i].c]));
     } else {
@@ -118,50 +136,40 @@ function updateBoard(g) {
   layer.draw();
 }
 
-function updateScores(ss, he) {
-  var scores = Game.scoresToJs(ss);
-  var entry = Game.historyEntryToJs(he);
-  var scr = scrs[player];
-  scr.scr.setAttr('text', '' + scores[player]);
-  scr.scr.setOffset({ x: scr.scr.getWidth() / 2, y: 0 });
-  if ('dir' in entry) scr.lastm.setAttr('text', directionSymbolMap[entry.dir]);
-  scr.lastm.setOffset({ x: scr.lastm.getWidth() / 2, y: 0 });
-  scr.gombocka.scale({x: 1, y: 1});
-  scrs[(player + 1) % players].gombocka.scale({x: 1.5, y: 1.5});
+function updateScores(scores, history, player) {
+  for (let p = 0; p < players; p++) {
+    let scr = scrs[p].scr;
+    scr.setAttr('text', '' + scores[p]);
+    scr.setOffset({ x: scr.getWidth() / 2, y: 0 });
+    if (history[p] && history[p].dir !== undefined) {
+      let lastm = scrs[(players + player - p - 1) % players].lastm;
+      lastm.setAttr('text', directionSymbolMap[history[p].dir]);
+      lastm.setOffset({ x: lastm.getWidth() / 2, y: 0 });
+    }
+  }
   layer.draw();
 }
 
-function gameOver(msg) {
-  scrs[player].gombocka.scale({x: 1, y: 1});
-  var message = new Konva.Text({
-    x: r + players * 2 * r,
-    y: scoreY,
-    text: msg,
-    fontFamily: 'Dosis',
-    fontStyle: 'bold',
-    fontSize: fontSize,
-    fill: 'black'
-  });
-  message.setOffset({x: 0, y: message.getHeight() / 2});
-  layer.add(message);
+function message(text) {
+  msg.setAttr('text', text.toUpperCase());
   layer.draw();
 }
 
 function initBoard(g) {
-  var graph = Game.graphToJs(g);
+  let graph = Eleven.graphToJs(g);
 
   layer = new Konva.Layer();
 
   // scores
-  var line = new Konva.Line({
+  let line = new Konva.Line({
     points: [0, scoreY, width, scoreY],
     stroke: 'black',
     strokeWidth: 0.1
   });
   layer.add(line);
-  for (i = 0; i < players; i++) {
-    var xi = r + i * 2 * r;
-    var gombocka = new Konva.Circle({
+  for (let i = 0; i < players; i++) {
+    let xi = r + i * 2 * r;
+    let gombocka = new Konva.Circle({
       name: 'gombocka-' + i,
       x: xi,
       y: scoreY,
@@ -169,7 +177,7 @@ function initBoard(g) {
       fill: color(colorMap[i])
     });
     layer.add(gombocka);
-    var score = new Konva.Text({
+    let score = new Konva.Text({
       name: 'score-' + i,
       x:  xi,
       y: scoreY - fontSize - 2 * str,
@@ -181,7 +189,7 @@ function initBoard(g) {
     });
     score.setOffset({x: score.getWidth() / 2, y: 0});
     layer.add(score);
-    var lastm = new Konva.Text({
+    let lastm = new Konva.Text({
       name: 'lastm-' + i,
       x: xi,
       y: scoreY + 2 * str,
@@ -195,20 +203,28 @@ function initBoard(g) {
     scrs.push({gombocka: gombocka, scr: score, lastm: lastm});
     layer.add(lastm);
   }
-  var cur = layer.getChildren(c => c.getName() == 'gombocka-0')[0];
-  cur.scale({x: 1.5, y: 1.5});
+  msg = new Konva.Text({
+    x: r + players * 2 * r,
+    y: scoreY - fontSize / 2,
+    text: '',
+    fontFamily: 'Dosis',
+    fontStyle: 'bold',
+    fontSize: fontSize,
+    fill: 'black'
+  });
+  layer.add(msg);
 
   // circles
-  for (y = cy - (3 * s); y <= cy + (3 * s); y = y + s + s) {
-    for (x = cx - (3 * s); x <= cx + (3 * s); x = x + s + s) {
-      var n = new Konva.Circle({
+  for (let y = cy - (3 * s); y <= cy + (3 * s); y = y + s + s) {
+    for (let x = cx - (3 * s); x <= cx + (3 * s); x = x + s + s) {
+      let n = new Konva.Circle({
         x: x,
         y: y,
         radius: str,
         fill: 'black'
       });
       layer.add(n);
-      var c = new Konva.Circle({
+      let c = new Konva.Circle({
         x: x,
         y: y,
         radius: r,
@@ -216,7 +232,7 @@ function initBoard(g) {
       });
       circles.push(c);
       layer.add(c);
-      var t = new Konva.Text({
+      let t = new Konva.Text({
         x: x,
         y: y,
         text: '0',
@@ -232,16 +248,16 @@ function initBoard(g) {
   }
 
   // arrows
-  for (d = 0; d < graph.edges.length; d++) {
-    for (e = 0; e < graph.edges[d].length; e++) {
-      var edge = graph.edges[d][e];
-      var from = circles[edge.from];
-      var to = circles[edge.to];
-      var x1 = from.attrs.x;
-      var y1 = from.attrs.y;
-      var x2 = to.attrs.x;
-      var y2 = to.attrs.y;
-      var a = new Konva.Arrow({
+  for (let d = 0; d < graph.edges.length; d++) {
+    for (let e = 0; e < graph.edges[d].length; e++) {
+      let edge = graph.edges[d][e];
+      let from = circles[edge.from];
+      let to = circles[edge.to];
+      let x1 = from.attrs.x;
+      let y1 = from.attrs.y;
+      let x2 = to.attrs.x;
+      let y2 = to.attrs.y;
+      let a = new Konva.Arrow({
         points: arrowPoints(x1, y1, x2, y2, r, str),
         pointerLength: 0,
         pointerWidth: 0,
@@ -254,7 +270,7 @@ function initBoard(g) {
     }
   }
 
-  var stage = new Konva.Stage({
+  let stage = new Konva.Stage({
     container: 'container',
     width: width,
     height: height

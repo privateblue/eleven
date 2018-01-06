@@ -4,7 +4,7 @@ name := "eleven"
 
 scalaVersion := "2.12.4"
 
-scalacOptions += "-Ypartial-unification"
+scalacOptions += "-P:scalajs:sjsDefinedByDefault"
 
 lazy val root = project.in(file(".")).aggregate(appJS, appJVM)
 
