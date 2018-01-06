@@ -1,11 +1,7 @@
-const players = 3;
-const machines = [0,2];
-const colorMap = [[81,134,198], [229,87,16], [190,255,117]];
-const names = ['blue', 'red', 'green']
-
-const graph = Eleven.graphOriginal;
 const directionKeyMap = [39, 37, 40, 38];
 const directionSymbolMap = ['→', '←', '↓', '↑'];
+const colorMap = [[81,134,198], [229,87,16], [190,255,117]];
+const names = ['blue', 'red', 'green']
 
 const width = window.innerWidth;
 const height = window.innerHeight;
@@ -18,22 +14,120 @@ const s = Math.round(2.5 * r);              // spacing factor btw value circles
 const scoreY = Math.round(1.5 * r);         // score bar vertical position
 const fontSize = Math.round(r / 2);         // font size
 
-let circles = [];
-let vals = [];
-let scrs = [];
+let stage = new Konva.Stage({
+  container: 'container',
+  width: width,
+  height: height
+});
+let graphLayer = new Konva.Layer();
+let diskLayer = new Konva.Layer();
+let scoreLayer = new Konva.Layer();
+stage.add(graphLayer);
+stage.add(diskLayer);
+stage.add(scoreLayer);
 
-let layer;
+let line = new Konva.Line({
+  points: [0, scoreY, width, scoreY],
+  stroke: 'black',
+  strokeWidth: 0.1
+});
+scoreLayer.add(line);
+
+let board;
+let circles;
+let vals;
+let scrs;
+let players;
+let machines;
 let msg;
 
-initBoard(graph);
-
 let stored = localStorage.getItem('game');
-if (stored) {
-  let con = Eleven.gameOf(JSON.parse(stored));
-  move(con);
-} else {
-  let start = Eleven.start(graph, players);
+if (stored) resume(stored)
+else configure();
+
+function configure() {
+  board = Eleven.graphOriginal;
+  circles = [];
+  vals = [];
+  initBoard(Eleven.graphToJs(board).edges);
+  scrs = [];
+  players = 0;
+  machines = [];
+  addPlayer();
+  let controls = new Konva.Group({});
+  scoreLayer.add(controls);
+  updateConfigControls(controls);
+}
+
+function start() {
+  initMsg();
+  let start = Eleven.start(board, players);
   move(start);
+}
+
+function resume(stored) {
+  let game = JSON.parse(stored);
+  let graph = game.graph;
+  board = Eleven.graphOf(graph);
+  circles = [];
+  vals = [];
+  initBoard(graph.edges);
+  scrs = [];
+  players = 0;
+  machines = [];
+  for (let i = 0; i < game.scores.length; i++) addPlayer();
+  initMsg();
+  move(Eleven.gameOf(game));
+}
+
+function finish(farewell) {
+  message(farewell);
+  localStorage.removeItem('game');
+  localStorage.removeItem('machines');
+  let xi = r + players * 2 * r;
+  let restart = new Konva.Text({
+    x: xi,
+    y: scoreY - str,
+    width: 2 * str,
+    height: 2 * str,
+    align: 'center',
+    padding: -fontSize / 2,
+    text: '↺',
+    fontFamily: 'Dosis',
+    fontStyle: 'bold',
+    fontSize: 2 * fontSize,
+    fill: 'black'
+  });
+  restart.on('click', function(evt) {
+    msg.remove();
+    restart.remove();
+    newgame.remove();
+    start();
+  });
+  restart.offsetX(-msg.getWidth() - str);
+  scoreLayer.add(restart);
+  let newgame = new Konva.Text({
+    x: xi,
+    y: scoreY - str,
+    width: 2 * str,
+    height: 2 * str,
+    align: 'center',
+    padding: -fontSize / 2,
+    text: '◂',
+    fontFamily: 'Dosis',
+    fontStyle: 'bold',
+    fontSize: 2 * fontSize,
+    fill: 'black'
+  });
+  newgame.on('click', function(evt) {
+    diskLayer.removeChildren();
+    graphLayer.removeChildren();
+    scoreLayer.removeChildren();
+    configure();
+  });
+  newgame.offsetX(-msg.getWidth() - restart.getWidth() - 2 * str);
+  scoreLayer.add(newgame);
+  scoreLayer.draw();
 }
 
 function move(gm) {
@@ -76,11 +170,9 @@ function move(gm) {
     let next = Eleven.move(gm, Eleven.emptyPickerOf(ep), Eleven.directionPickerOf(dp), Eleven.resultHandlerOf(rh));
     next.then(move);
   } else if (game.state == 'nomoremoves') {
-    message('no more valid moves, ' + names[game.winner] + ' wins with ' + game.scores[game.winner] + ' points');
-    localStorage.removeItem('game');
+    finish('no more valid moves, ' + names[game.winner] + ' wins with ' + game.scores[game.winner] + ' points');
   } else if (game.state == 'eleven') {
-    message(names[game.winner] + ' wins with eleven');
-    localStorage.removeItem('game');
+    finish(names[game.winner] + ' wins with eleven');
   }
 }
 
@@ -133,87 +225,106 @@ function updateBoard(graph) {
     vals[i].setOffset({x: vals[i].getWidth() / 2, y: vals[i].getHeight() / 2});
     vals[i].visible(graph.values[i].v != 0);
   }
-  layer.draw();
+  diskLayer.draw();
 }
 
-function updateScores(scores, history, player) {
+function updateScores(scores, history, offset) {
   for (let p = 0; p < players; p++) {
     let scr = scrs[p].scr;
     scr.setAttr('text', '' + scores[p]);
     scr.setOffset({ x: scr.getWidth() / 2, y: 0 });
     if (history[p] && history[p].dir !== undefined) {
-      let lastm = scrs[(players + player - p - 1) % players].lastm;
+      let lastm = scrs[(players + offset - p - 1) % players].lastm;
       lastm.setAttr('text', directionSymbolMap[history[p].dir]);
       lastm.setOffset({ x: lastm.getWidth() / 2, y: 0 });
+    } else {
+      scrs[p].lastm.setAttr('text', '');
     }
   }
-  layer.draw();
+  scoreLayer.draw();
 }
 
 function message(text) {
   msg.setAttr('text', text.toUpperCase());
-  layer.draw();
+  scoreLayer.draw();
 }
 
-function initBoard(g) {
-  let graph = Eleven.graphToJs(g);
-
-  layer = new Konva.Layer();
-
-  // scores
-  let line = new Konva.Line({
-    points: [0, scoreY, width, scoreY],
-    stroke: 'black',
-    strokeWidth: 0.1
-  });
-  layer.add(line);
-  for (let i = 0; i < players; i++) {
-    let xi = r + i * 2 * r;
-    let gombocka = new Konva.Circle({
-      name: 'gombocka-' + i,
-      x: xi,
-      y: scoreY,
-      radius: str,
-      fill: color(colorMap[i])
-    });
-    layer.add(gombocka);
-    let score = new Konva.Text({
-      name: 'score-' + i,
-      x:  xi,
-      y: scoreY - fontSize - 2 * str,
-      text: '',
-      fontFamily: 'Dosis',
-      fontStyle: 'bold',
-      fontSize: fontSize,
-      fill: 'black'
-    });
-    score.setOffset({x: score.getWidth() / 2, y: 0});
-    layer.add(score);
-    let lastm = new Konva.Text({
-      name: 'lastm-' + i,
-      x: xi,
-      y: scoreY + 2 * str,
-      text: '',
-      fontFamily: 'Dosis',
-      fontStyle: 'bold',
-      fontSize: fontSize,
-      fill: 'black'
-    });
-    lastm.setOffset({x: lastm.getWidth() / 2, y: 0});
-    scrs.push({gombocka: gombocka, scr: score, lastm: lastm});
-    layer.add(lastm);
-  }
-  msg = new Konva.Text({
-    x: r + players * 2 * r,
-    y: scoreY - fontSize / 2,
-    text: '',
+function updateConfigControls(group) {
+  let xi = r + players * 2 * r;
+  group.removeChildren();
+  let plus = new Konva.Text({
+    x: xi,
+    y: scoreY - str,
+    width: 2 * str,
+    height: 2 * str,
+    align: 'center',
+    padding: -fontSize / 12 * 7,
+    text: '+',
     fontFamily: 'Dosis',
     fontStyle: 'bold',
-    fontSize: fontSize,
+    fontSize: 2 * fontSize,
     fill: 'black'
   });
-  layer.add(msg);
+  plus.on('click', function(evt) {
+    addPlayer();
+    updateConfigControls(group);
+    scoreLayer.draw();
+  });
+  let minus = new Konva.Text({
+    x: xi,
+    y: scoreY - str,
+    width: 2 * str,
+    height: 2 * str,
+    align: 'center',
+    padding: -fontSize / 12 * 7,
+    text: '-',
+    fontFamily: 'Dosis',
+    fontStyle: 'bold',
+    fontSize: 2 * fontSize,
+    fill: 'black'
+  });
+  minus.on('click', function(evt) {
+    removePlayer();
+    updateConfigControls(group);
+    scoreLayer.draw();
+  });
+  let play = new Konva.Text({
+    x: xi,
+    y: scoreY - str,
+    width: 2 * str,
+    height: 2 * str,
+    align: 'center',
+    padding: -fontSize / 2,
+    text: '▸',
+    fontFamily: 'Dosis',
+    fontStyle: 'bold',
+    fontSize: 2 * fontSize,
+    fill: 'black'
+  });
+  play.on('click', function(evt) {
+    group.remove();
+    scoreLayer.draw();
+    start();
+  });
+  if (players <= 1) {
+    play.offsetX(-plus.getWidth());
+    group.add(plus);
+    group.add(play);
+  } else if (players >= 3) {
+    play.offsetX(-minus.getWidth());
+    group.add(minus);
+    group.add(play);
+  } else {
+    plus.offsetX(-minus.getWidth());
+    play.offsetX(-minus.getWidth() - plus.getWidth());
+    group.add(minus);
+    group.add(plus);
+    group.add(play);
+  }
+  scoreLayer.draw();
+}
 
+function initBoard(edges) {
   // circles
   for (let y = cy - (3 * s); y <= cy + (3 * s); y = y + s + s) {
     for (let x = cx - (3 * s); x <= cx + (3 * s); x = x + s + s) {
@@ -223,7 +334,7 @@ function initBoard(g) {
         radius: str,
         fill: 'black'
       });
-      layer.add(n);
+      graphLayer.add(n);
       let c = new Konva.Circle({
         x: x,
         y: y,
@@ -231,7 +342,7 @@ function initBoard(g) {
         fill: color([255,255,255,0])
       });
       circles.push(c);
-      layer.add(c);
+      diskLayer.add(c);
       let t = new Konva.Text({
         x: x,
         y: y,
@@ -243,14 +354,14 @@ function initBoard(g) {
       t.setOffset({x: t.getWidth() / 2, y: t.getHeight() / 2});
       t.visible(false);
       vals.push(t);
-      layer.add(t);
+      diskLayer.add(t);
     }
   }
 
   // arrows
-  for (let d = 0; d < graph.edges.length; d++) {
-    for (let e = 0; e < graph.edges[d].length; e++) {
-      let edge = graph.edges[d][e];
+  for (let d = 0; d < edges.length; d++) {
+    for (let e = 0; e < edges[d].length; e++) {
+      let edge = edges[d][e];
       let from = circles[edge.from];
       let to = circles[edge.to];
       let x1 = from.attrs.x;
@@ -265,17 +376,13 @@ function initBoard(g) {
         stroke: 'black',
         strokeWidth: 0.5
       });
-      layer.add(a);
+      graphLayer.add(a);
       a.setZIndex(0);
     }
   }
 
-  let stage = new Konva.Stage({
-    container: 'container',
-    width: width,
-    height: height
-  });
-  stage.add(layer);
+  graphLayer.draw();
+  diskLayer.draw();
 }
 
 function arrowPoints(x1, y1, x2, y2, r, str) {
@@ -292,6 +399,101 @@ function arrowPoints(x1, y1, x2, y2, r, str) {
     // right
     return [x1 + str, y1, x2 - str, y2];
   }
+}
+
+function initMsg() {
+  msg = new Konva.Text({
+    x: r + players * 2 * r,
+    y: scoreY - fontSize / 2,
+    text: '',
+    fontFamily: 'Dosis',
+    fontStyle: 'bold',
+    fontSize: fontSize,
+    fill: 'black'
+  });
+  scoreLayer.add(msg);
+  scoreLayer.draw();
+}
+
+function addPlayer() {
+  let i = scrs.length;
+  let xi = r + i * 2 * r;
+  let gombocka = createOrUpdateGombocka(i);
+  let score = new Konva.Text({
+    name: 'score-' + i,
+    x:  xi,
+    y: scoreY - fontSize - 2 * str,
+    text: '',
+    fontFamily: 'Dosis',
+    fontStyle: 'bold',
+    fontSize: fontSize,
+    fill: 'black'
+  });
+  score.setOffset({x: score.getWidth() / 2, y: 0});
+  scoreLayer.add(score);
+  let lastm = new Konva.Text({
+    name: 'lastm-' + i,
+    x: xi,
+    y: scoreY + 2 * str,
+    text: '',
+    fontFamily: 'Dosis',
+    fontStyle: 'bold',
+    fontSize: fontSize,
+    fill: 'black'
+  });
+  lastm.setOffset({x: lastm.getWidth() / 2, y: 0});
+  scoreLayer.add(lastm);
+  scrs.push({gombocka: gombocka, scr: score, lastm: lastm});
+  players++;
+}
+
+function removePlayer() {
+  let i = scrs.length - 1;
+  scrs[i].gombocka.destroy();
+  scrs[i].scr.destroy();
+  scrs[i].lastm.destroy();
+  players--;
+  machines = machines.filter(p => p !== i);
+  scrs.pop();
+}
+
+function createOrUpdateGombocka(i) {
+  let xi = r + i * 2 * r
+  let gombocka;
+  if (machines.includes(i)) {
+    gombocka = new Konva.Rect({
+      name: 'gombocka-' + i,
+      x: xi - str,
+      y: scoreY - str,
+      width: 2 * str,
+      height: 2 * str,
+      fill: color(colorMap[i])
+    })
+    gombocka.on('click', function(evt) {
+      machines = machines.filter(p => p !== i);
+      createOrUpdateGombocka(i);
+      scoreLayer.draw();
+    });
+  } else {
+    gombocka = new Konva.Circle({
+      name: 'gombocka-' + i,
+      x: xi,
+      y: scoreY,
+      radius: str,
+      fill: color(colorMap[i])
+    });
+    gombocka.on('click', function(evt) {
+      machines.push(i);
+      createOrUpdateGombocka(i);
+      scoreLayer.draw();
+    });
+  }
+  if (scrs[i] !== undefined) {
+    scrs[i].gombocka.remove();
+    scrs[i] = {gombocka: gombocka, scr: scrs[i].scr, lastm: scrs[i].lastm}
+  }
+  scoreLayer.add(gombocka);
+  return gombocka;
 }
 
 function color(arr) {
