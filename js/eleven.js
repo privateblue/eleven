@@ -144,7 +144,7 @@ function move(gm) {
     if (players == 1) {
       let rm = Eleven.randomEmpty(gm);
       let random = Eleven.historyEntryToJs(rm);
-      ep = es => new Promise((res, rej) => res(Eleven.indexOf(random.put)));
+      ep = es => new Promise((res, rej) => setTimeout(() => res(Eleven.indexOf(random.put)), 200));
       dp = function(g, ds) {
         postPickEmptyUpdate(g, ds, player);
         return pickDirection(g, ds);
