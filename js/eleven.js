@@ -74,7 +74,7 @@ function move(gm) {
       }
     }
     let next = Eleven.move(gm, Eleven.emptyPickerOf(ep), Eleven.directionPickerOf(dp), Eleven.resultHandlerOf(rh));
-    Eleven.nextToJs(next).then(n => move(n));
+    next.then(move);
   } else if (game.state == 'nomoremoves') {
     message('no more valid moves, ' + names[game.winner] + ' wins with ' + game.scores[game.winner] + ' points');
     localStorage.removeItem('game');

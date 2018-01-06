@@ -24,13 +24,11 @@ object Eleven {
     emptyPicker: Game.EmptyPicker,
     directionPicker: Game.DirectionPicker,
     resultHandler: Game.ResultHandler
-  ) = Game.move(state, emptyPicker, directionPicker, resultHandler)
+  ) = Game.move(state, emptyPicker, directionPicker, resultHandler).toJSPromise
 
   def randomEmpty(state: Continued) = Game.randomEmpty(state)
 
   def bestMove(state: Continued) = Game.bestMove(state)
-
-  def nextToJs(next: Future[Game]) = next.toJSPromise // TODO check if this is needed
 
   def gameToJs(game: Game) = game match {
     case Continued(g, h, ss) => new JsGame {
