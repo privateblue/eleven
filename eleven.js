@@ -68,7 +68,13 @@ function start() {
 function resume(stored) {
   let game = JSON.parse(stored);
   let graph = game.graph;
-  board = Eleven.graphOf(graph);
+  // TODO This is a hack to replace values with empties in the graph just
+  // loaded, so that at restart we start with an empty board, not with
+  // the last position loaded from local storage. There must be a better way!
+  board = Eleven.graphOf({
+    values: graph.values.slice().fill({v: 0, c: undefined}),
+    edges: graph.edges
+  });
   circles = [];
   vals = [];
   initBoard(graph.edges);
