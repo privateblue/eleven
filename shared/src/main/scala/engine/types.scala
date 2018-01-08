@@ -17,15 +17,14 @@ case class Score(s: Int) {
 }
 
 object Value {
-  val empty = Value(0, None)
+  val empty = Value(1, None)
 
   val ordering = math.Ordering.by[Value, Int](_.v)
 }
 
 case class Value(v: Int, c: Option[Color]) {
-  val eleven = v == 11
-  def next = Value(v + 1, c)
-  def prev = Value(v - 1, c)
+  def eleven = v == Value.empty.next.next.next.next.next.next.next.next.next.next.next.v
+  def next = Value(v * 2, c)
   def paint(nc: Color) = Value(v, Some(nc))
   def toScore = Score(v)
 }

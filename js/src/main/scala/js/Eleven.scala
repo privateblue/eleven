@@ -30,6 +30,8 @@ object Eleven {
 
   def bestMove(state: Continued) = Game.bestMove(state)
 
+  val emptyValue = valueToJs(Value.empty)
+
   def gameToJs(game: Game) = game match {
     case Continued(g, h, ss) => new JsGame {
       val state = "continued"
