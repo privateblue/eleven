@@ -7,12 +7,16 @@ const width = window.innerWidth;
 const height = window.innerHeight;
 const size = Math.min(width, height);       // shorter side of screen
 const cx = Math.round(width / 2);           // horizontal center of screen
-const cy = Math.round(height / 2);          // vertical center of screen
-const r = Math.round(size / 25);            // initial radius of value circle
+const r = Math.round(size / 25);            // initial radius of disk
 const str = Math.round(r / 3);              // base stroke width factor
-const s = Math.round(2.5 * r);              // spacing factor btw value nodes
-const scoreY = Math.round(1.5 * r);         // score bar vertical position
 const fontSize = Math.round(r / 2);         // font size
+const s = Math.round(3 * r);                // spacing factor btw nodes
+const lx = cx - (3 * s);                    // left edge horizontal
+const rx = lx + (6 * s);                    // right edge horizontal
+const lineY = Math.round(1.5 * r);          // score / control bar vertical
+const cy = Math.round(height / 2 + lineY);  // vertical center of screen
+const ly = cy - (3 * s);                    // left edge vertical
+const ry = ly + (6 * s);                    // right edge vertical
 
 let stage = new Konva.Stage({
   container: 'container',
@@ -31,7 +35,7 @@ stage.add(scoreLayer);
 stage.add(controlLayer);
 
 let line = new Konva.Line({
-  points: [0, scoreY, width, scoreY],
+  points: [0, lineY, width, lineY],
   stroke: 'black',
   strokeWidth: 0.1
 });
@@ -136,7 +140,7 @@ function move(gm) {
     );
     next.then(move);
   } else if (game.state == 'nomoremoves') {
-    finish('no more valid moves, ' + names[game.winner] + ' wins with ' + game.scores[game.winner] + ' points');
+    finish('no more valid moves, ' + names[game.winner] + ' wins');
   } else if (game.state == 'eleven') {
     finish(names[game.winner] + ' wins with eleven');
   }
@@ -216,17 +220,17 @@ function message(text) {
 }
 
 function updateConfigControls(minus, plus, play) {
-  play.offsetX(play.getWidth());
-  plus.offsetX(play.getWidth() + plus.getWidth());
+  play.offsetX(play.getWidth() / 2);
+  plus.offsetX(play.getWidth() / 2 + plus.getWidth());
   if (players <= 1) {
     minus.hide();
     plus.show();
   } else if (players >= 3) {
-    minus.offsetX(play.getWidth() + minus.getWidth());
+    minus.offsetX(play.getWidth() / 2 + minus.getWidth());
     minus.show();
     plus.hide();
   } else {
-    minus.offsetX(play.getWidth() + plus.getWidth() + minus.getWidth());
+    minus.offsetX(play.getWidth() / 2 + plus.getWidth() + minus.getWidth());
     minus.show();
     plus.show();
   }
@@ -234,10 +238,10 @@ function updateConfigControls(minus, plus, play) {
 }
 
 function initConfigControls() {
-  let xi = width - r;
+  let xi = rx;
   let minus = new Konva.Text({
     x: xi,
-    y: scoreY - str,
+    y: lineY - str,
     width: 2 * str,
     height: 2 * str,
     align: 'center',
@@ -251,7 +255,7 @@ function initConfigControls() {
   controlLayer.add(minus);
   let plus = new Konva.Text({
     x: xi,
-    y: scoreY - str,
+    y: lineY - str,
     width: 2 * str,
     height: 2 * str,
     align: 'center',
@@ -265,7 +269,7 @@ function initConfigControls() {
   controlLayer.add(plus);
   let play = new Konva.Text({
     x: xi,
-    y: scoreY - str,
+    y: lineY - str,
     width: 2 * str,
     height: 2 * str,
     align: 'center',
@@ -298,10 +302,10 @@ function initConfigControls() {
 }
 
 function initPlayControls() {
-  let xi = width - r;
+  let xi = rx;
   let restart = new Konva.Text({
     x: xi,
-    y: scoreY - str,
+    y: lineY - str,
     width: 2 * str,
     height: 2 * str,
     align: 'center',
@@ -314,7 +318,7 @@ function initPlayControls() {
   controlLayer.add(restart);
   let newgame = new Konva.Text({
     x: xi,
-    y: scoreY - str,
+    y: lineY - str,
     width: 2 * str,
     height: 2 * str,
     align: 'center',
@@ -335,15 +339,95 @@ function initPlayControls() {
     localStorage.removeItem('game');
     location.reload(true);
   });
-  newgame.offsetX(newgame.getWidth());
-  restart.offsetX(newgame.getWidth() + restart.getWidth());
+  newgame.offsetX(newgame.getWidth() / 2);
+  restart.offsetX(newgame.getWidth() / 2 + restart.getWidth());
   controlLayer.draw();
+}
+
+function addPlayer() {
+  let i = scrs.length;
+  let xi = lx + i * 3 * str;
+  let gombocka = createOrUpdateGombocka(i, xi);
+  let score = new Konva.Text({
+    name: 'score-' + i,
+    x:  xi,
+    y: lineY - fontSize - 2 * str,
+    text: '',
+    fontFamily: 'Dosis',
+    fontStyle: 'bold',
+    fontSize: fontSize,
+    fill: 'black'
+  });
+  score.setOffset({x: score.getWidth() / 2, y: 0});
+  scoreLayer.add(score);
+  let lastm = new Konva.Text({
+    name: 'lastm-' + i,
+    x: xi,
+    y: lineY + 2 * str,
+    text: '',
+    fontFamily: 'Dosis',
+    fontStyle: 'bold',
+    fontSize: fontSize,
+    fill: 'black'
+  });
+  lastm.setOffset({x: lastm.getWidth() / 2, y: 0});
+  scoreLayer.add(lastm);
+  scrs.push({gombocka: gombocka, scr: score, lastm: lastm});
+  players++;
+}
+
+function removePlayer() {
+  let i = scrs.length - 1;
+  scrs[i].gombocka.destroy();
+  scrs[i].scr.destroy();
+  scrs[i].lastm.destroy();
+  players--;
+  machines = machines.filter(p => p !== i);
+  scrs.pop();
+}
+
+function createOrUpdateGombocka(i, xi) {
+  let gombocka;
+  if (machines.includes(i)) {
+    gombocka = new Konva.Rect({
+      name: 'gombocka-' + i,
+      x: xi - str,
+      y: lineY - str,
+      width: 2 * str,
+      height: 2 * str,
+      fill: color(colorMap[i])
+    })
+    gombocka.on('click', function(evt) {
+      machines = machines.filter(p => p !== i);
+      createOrUpdateGombocka(i, xi);
+      scoreLayer.draw();
+    });
+  } else {
+    gombocka = new Konva.Circle({
+      name: 'gombocka-' + i,
+      x: xi,
+      y: lineY,
+      radius: str,
+      fill: color(colorMap[i])
+    });
+    gombocka.on('click', function(evt) {
+      machines.push(i);
+      createOrUpdateGombocka(i, xi);
+      scoreLayer.draw();
+    });
+  }
+  if (scrs[i] !== undefined) {
+    scrs[i].gombocka.remove();
+    scrs[i] = {gombocka: gombocka, scr: scrs[i].scr, lastm: scrs[i].lastm}
+  }
+  scoreLayer.add(gombocka);
+  return gombocka;
 }
 
 function initMsg() {
   msg = new Konva.Text({
-    x: r + players * 2 * r,
-    y: scoreY - fontSize / 2,
+    x: lx + players * 3 * str,
+    y: lineY - fontSize / 2,
     text: '',
     fontFamily: 'Dosis',
     fontStyle: 'bold',
@@ -356,8 +440,8 @@ function initMsg() {
 
 function initBoard(edges) {
   // nodes
-  for (let y = cy - (3 * s); y <= cy + (3 * s); y = y + s + s) {
-    for (let x = cx - (3 * s); x <= cx + (3 * s); x = x + s + s) {
+  for (let y = ly; y <= ry; y = y + s + s) {
+    for (let x = lx; x <= rx; x = x + s + s) {
       let node = new Konva.Circle({
         x: x,
         y: y,
@@ -428,87 +512,6 @@ function arrowPoints(x1, y1, x2, y2, r, str) {
     // right
     return [x1 + str, y1, x2 - str, y2];
   }
-}
-
-function addPlayer() {
-  let i = scrs.length;
-  let xi = r + i * 2 * r;
-  let gombocka = createOrUpdateGombocka(i);
-  let score = new Konva.Text({
-    name: 'score-' + i,
-    x:  xi,
-    y: scoreY - fontSize - 2 * str,
-    text: '',
-    fontFamily: 'Dosis',
-    fontStyle: 'bold',
-    fontSize: fontSize,
-    fill: 'black'
-  });
-  score.setOffset({x: score.getWidth() / 2, y: 0});
-  scoreLayer.add(score);
-  let lastm = new Konva.Text({
-    name: 'lastm-' + i,
-    x: xi,
-    y: scoreY + 2 * str,
-    text: '',
-    fontFamily: 'Dosis',
-    fontStyle: 'bold',
-    fontSize: fontSize,
-    fill: 'black'
-  });
-  lastm.setOffset({x: lastm.getWidth() / 2, y: 0});
-  scoreLayer.add(lastm);
-  scrs.push({gombocka: gombocka, scr: score, lastm: lastm});
-  players++;
-}
-
-function removePlayer() {
-  let i = scrs.length - 1;
-  scrs[i].gombocka.destroy();
-  scrs[i].scr.destroy();
-  scrs[i].lastm.destroy();
-  players--;
-  machines = machines.filter(p => p !== i);
-  scrs.pop();
-}
-
-function createOrUpdateGombocka(i) {
-  let xi = r + i * 2 * r
-  let gombocka;
-  if (machines.includes(i)) {
-    gombocka = new Konva.Rect({
-      name: 'gombocka-' + i,
-      x: xi - str,
-      y: scoreY - str,
-      width: 2 * str,
-      height: 2 * str,
-      fill: color(colorMap[i])
-    })
-    gombocka.on('click', function(evt) {
-      machines = machines.filter(p => p !== i);
-      createOrUpdateGombocka(i);
-      scoreLayer.draw();
-    });
-  } else {
-    gombocka = new Konva.Circle({
-      name: 'gombocka-' + i,
-      x: xi,
-      y: scoreY,
-      radius: str,
-      fill: color(colorMap[i])
-    });
-    gombocka.on('click', function(evt) {
-      machines.push(i);
-      createOrUpdateGombocka(i);
-      scoreLayer.draw();
-    });
-  }
-  if (scrs[i] !== undefined) {
-    scrs[i].gombocka.remove();
-    scrs[i] = {gombocka: gombocka, scr: scrs[i].scr, lastm: scrs[i].lastm}
-  }
-  scoreLayer.add(gombocka);
-  return gombocka;
 }
 
 function color(arr) {
