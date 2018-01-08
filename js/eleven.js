@@ -19,26 +19,31 @@ let stage = new Konva.Stage({
   width: width,
   height: height
 });
+let backgroundLayer = new Konva.Layer();
 let graphLayer = new Konva.Layer();
 let diskLayer = new Konva.Layer();
 let scoreLayer = new Konva.Layer();
+let controlLayer = new Konva.Layer();
+stage.add(backgroundLayer);
 stage.add(graphLayer);
 stage.add(diskLayer);
 stage.add(scoreLayer);
+stage.add(controlLayer);
 
 let line = new Konva.Line({
   points: [0, scoreY, width, scoreY],
   stroke: 'black',
   strokeWidth: 0.1
 });
-scoreLayer.add(line);
+backgroundLayer.add(line);
+backgroundLayer.draw();
 
 let board;
-let circles;
-let vals;
-let scrs;
-let players;
-let machines;
+let circles = [];
+let vals = [];
+let scrs = [];
+let players = 0;
+let machines = [];
 let msg;
 
 let stored = localStorage.getItem('game');
@@ -47,20 +52,15 @@ else configure();
 
 function configure() {
   board = Eleven.graphOriginal;
-  circles = [];
-  vals = [];
   initBoard(Eleven.graphToJs(board).edges);
-  scrs = [];
-  players = 0;
-  machines = [];
   addPlayer();
-  let controls = new Konva.Group({});
-  scoreLayer.add(controls);
-  updateConfigControls(controls);
+  scoreLayer.draw();
+  initConfigControls();
 }
 
 function start() {
   initMsg();
+  initPlayControls();
   let start = Eleven.start(board, players);
   move(start);
 }
@@ -75,65 +75,16 @@ function resume(stored) {
     values: graph.values.slice().fill({v: 0, c: undefined}),
     edges: graph.edges
   });
-  circles = [];
-  vals = [];
   initBoard(graph.edges);
-  scrs = [];
-  players = 0;
-  machines = [];
   for (let i = 0; i < game.scores.length; i++) addPlayer();
   initMsg();
+  initPlayControls();
   move(Eleven.gameOf(game));
 }
 
 function finish(farewell) {
   message(farewell);
   localStorage.removeItem('game');
-  localStorage.removeItem('machines');
-  let xi = r + players * 2 * r;
-  let restart = new Konva.Text({
-    x: xi,
-    y: scoreY - str,
-    width: 2 * str,
-    height: 2 * str,
-    align: 'center',
-    padding: -fontSize / 2,
-    text: '↺',
-    fontFamily: 'Dosis',
-    fontStyle: 'bold',
-    fontSize: 2 * fontSize,
-    fill: 'black'
-  });
-  restart.on('click', function(evt) {
-    msg.remove();
-    restart.remove();
-    newgame.remove();
-    start();
-  });
-  restart.offsetX(-msg.getWidth() - str);
-  scoreLayer.add(restart);
-  let newgame = new Konva.Text({
-    x: xi,
-    y: scoreY - str,
-    width: 2 * str,
-    height: 2 * str,
-    align: 'center',
-    padding: -fontSize / 2,
-    text: '◂',
-    fontFamily: 'Dosis',
-    fontStyle: 'bold',
-    fontSize: 2 * fontSize,
-    fill: 'black'
-  });
-  newgame.on('click', function(evt) {
-    diskLayer.removeChildren();
-    graphLayer.removeChildren();
-    scoreLayer.removeChildren();
-    configure();
-  });
-  newgame.offsetX(-msg.getWidth() - restart.getWidth() - 2 * str);
-  scoreLayer.add(newgame);
-  scoreLayer.draw();
 }
 
 function move(gm) {
@@ -186,8 +137,8 @@ function pickEmpty(empties) {
   let es = Eleven.emptiesToJs(empties);
   return new Promise(function(resolve, reject) {
     for (let i = 0; i < es.length; i++) {
-      circles[es[i]].on("click", function(evt) {
-        circles.forEach(c => c.off("click"));
+      circles[es[i]].on('click', function(evt) {
+        circles.forEach(c => c.off('click'));
         let index = circles.findIndex(c => c == this);
         resolve(Eleven.indexOf(index));
       });
@@ -202,11 +153,11 @@ function pickDirection(graph, directions) {
     document.addEventListener('keydown', function _handler(evt) {
       evt.preventDefault();
       if (keys.includes(evt.keyCode)) {
-        document.removeEventListener('keydown', _handler, false);
+        document.removeEventListener('keydown', _handler, true);
         let direction = directionKeyMap.indexOf(evt.keyCode);
         resolve(Eleven.directionOf(direction));
       }
-    }, false);
+    }, true);
   });
 }
 
@@ -255,27 +206,26 @@ function message(text) {
   scoreLayer.draw();
 }
 
-function updateConfigControls(group) {
-  let xi = r + players * 2 * r;
-  group.removeChildren();
-  let plus = new Konva.Text({
-    x: xi,
-    y: scoreY - str,
-    width: 2 * str,
-    height: 2 * str,
-    align: 'center',
-    padding: -fontSize / 12 * 7,
-    text: '+',
-    fontFamily: 'Dosis',
-    fontStyle: 'bold',
-    fontSize: 2 * fontSize,
-    fill: 'black'
-  });
-  plus.on('click', function(evt) {
-    addPlayer();
-    updateConfigControls(group);
-    scoreLayer.draw();
-  });
+function updateConfigControls(minus, plus, play) {
+  play.offsetX(play.getWidth());
+  plus.offsetX(play.getWidth() + plus.getWidth());
+  if (players <= 1) {
+    minus.hide();
+    plus.show();
+  } else if (players >= 3) {
+    minus.offsetX(play.getWidth() + minus.getWidth());
+    minus.show();
+    plus.hide();
+  } else {
+    minus.offsetX(play.getWidth() + plus.getWidth() + minus.getWidth());
+    minus.show();
+    plus.show();
+  }
+  controlLayer.draw();
+}
+
+function initConfigControls() {
+  let xi = width - r - 2 * str;
   let minus = new Konva.Text({
     x: xi,
     y: scoreY - str,
@@ -289,11 +239,21 @@ function updateConfigControls(group) {
     fontSize: 2 * fontSize,
     fill: 'black'
   });
-  minus.on('click', function(evt) {
-    removePlayer();
-    updateConfigControls(group);
-    scoreLayer.draw();
+  controlLayer.add(minus);
+  let plus = new Konva.Text({
+    x: xi,
+    y: scoreY - str,
+    width: 2 * str,
+    height: 2 * str,
+    align: 'center',
+    padding: -fontSize / 12 * 7,
+    text: '+',
+    fontFamily: 'Dosis',
+    fontStyle: 'bold',
+    fontSize: 2 * fontSize,
+    fill: 'black'
   });
+  controlLayer.add(plus);
   let play = new Konva.Text({
     x: xi,
     y: scoreY - str,
@@ -307,26 +267,81 @@ function updateConfigControls(group) {
     fontSize: 2 * fontSize,
     fill: 'black'
   });
-  play.on('click', function(evt) {
-    group.remove();
+  controlLayer.add(play);
+  plus.on('click', function(evt) {
+    addPlayer();
     scoreLayer.draw();
+    updateConfigControls(minus, plus, play);
+  });
+  minus.on('click', function(evt) {
+    removePlayer();
+    scoreLayer.draw();
+    updateConfigControls(minus, plus, play);
+  });
+  play.on('click', function(evt) {
+    minus.hide();
+    plus.hide();
+    play.hide();
+    controlLayer.draw();
     start();
   });
-  if (players <= 1) {
-    play.offsetX(-plus.getWidth());
-    group.add(plus);
-    group.add(play);
-  } else if (players >= 3) {
-    play.offsetX(-minus.getWidth());
-    group.add(minus);
-    group.add(play);
-  } else {
-    plus.offsetX(-minus.getWidth());
-    play.offsetX(-minus.getWidth() - plus.getWidth());
-    group.add(minus);
-    group.add(plus);
-    group.add(play);
-  }
+  updateConfigControls(minus, plus, play);
+}
+
+function initPlayControls() {
+  let xi = width - r - 2 * str;
+  let restart = new Konva.Text({
+    x: xi,
+    y: scoreY - str,
+    width: 2 * str,
+    height: 2 * str,
+    align: 'center',
+    text: '↺',
+    fontFamily: 'Dosis',
+    fontStyle: 'bold',
+    fontSize: 1.2 * fontSize,
+    fill: 'black'
+  });
+  controlLayer.add(restart);
+  let newgame = new Konva.Text({
+    x: xi,
+    y: scoreY - str,
+    width: 2 * str,
+    height: 2 * str,
+    align: 'center',
+    padding: -fontSize / 2,
+    text: '▪',
+    fontFamily: 'Dosis',
+    fontStyle: 'bold',
+    fontSize: 2 * fontSize,
+    fill: 'black'
+  });
+  controlLayer.add(newgame);
+  restart.on('click', function(evt) {
+    let start = Eleven.start(board, players);
+    localStorage.setItem('game', JSON.stringify(Eleven.gameToJs(start)));
+    location.reload(true);
+  });
+  newgame.on('click', function(evt) {
+    localStorage.removeItem('game');
+    location.reload(true);
+  });
+  newgame.offsetX(newgame.getWidth());
+  restart.offsetX(newgame.getWidth() + restart.getWidth());
+  controlLayer.draw();
+}
+
+function initMsg() {
+  msg = new Konva.Text({
+    x: r + players * 2 * r,
+    y: scoreY - fontSize / 2,
+    text: '',
+    fontFamily: 'Dosis',
+    fontStyle: 'bold',
+    fontSize: fontSize,
+    fill: 'black'
+  });
+  scoreLayer.add(msg);
   scoreLayer.draw();
 }
 
@@ -405,20 +420,6 @@ function arrowPoints(x1, y1, x2, y2, r, str) {
     // right
     return [x1 + str, y1, x2 - str, y2];
   }
-}
-
-function initMsg() {
-  msg = new Konva.Text({
-    x: r + players * 2 * r,
-    y: scoreY - fontSize / 2,
-    text: '',
-    fontFamily: 'Dosis',
-    fontStyle: 'bold',
-    fontSize: fontSize,
-    fill: 'black'
-  });
-  scoreLayer.add(msg);
-  scoreLayer.draw();
 }
 
 function addPlayer() {
