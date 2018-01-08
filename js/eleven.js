@@ -10,7 +10,7 @@ const cx = Math.round(width / 2);           // horizontal center of screen
 const cy = Math.round(height / 2);          // vertical center of screen
 const r = Math.round(size / 25);            // initial radius of value circle
 const str = Math.round(r / 3);              // base stroke width factor
-const s = Math.round(2.5 * r);              // spacing factor btw value circles
+const s = Math.round(2.5 * r);              // spacing factor btw value nodes
 const scoreY = Math.round(1.5 * r);         // score bar vertical position
 const fontSize = Math.round(r / 2);         // font size
 
@@ -39,8 +39,8 @@ backgroundLayer.add(line);
 backgroundLayer.draw();
 
 let board;
-let circles = [];
-let vals = [];
+let nodes = [];
+let arrows = [];
 let scrs = [];
 let players = 0;
 let machines = [];
@@ -101,7 +101,9 @@ function move(gm) {
     if (players == 1) {
       let rm = Eleven.randomEmpty(gm);
       let random = Eleven.historyEntryToJs(rm);
-      ep = es => new Promise((res, rej) => setTimeout(() => res(Eleven.indexOf(random.put)), 200));
+      ep = es => new Promise((res, rej) =>
+        setTimeout(() => res(Eleven.indexOf(random.put)), 200)
+      );
       dp = function(g, ds) {
         postPickEmptyUpdate(g, ds, player);
         return pickDirection(g, ds);
@@ -111,7 +113,9 @@ function move(gm) {
       let best = new Promise(function(resolve, reject) {
         setTimeout(() => resolve(Eleven.historyEntryToJs(Eleven.bestMove(gm))), 200);
       });
-      ep = es => best.then(bm => new Promise((res, rej) => res(Eleven.indexOf(bm.put))));
+      ep = es => best.then(bm =>
+        new Promise((res, rej) => res(Eleven.indexOf(bm.put)))
+      );
       dp = (g, ds) => best.then(bm => new Promise(function(resolve, reject) {
         postPickEmptyUpdate(g, ds, player)
         setTimeout(() => resolve(Eleven.directionOf(bm.dir)), 1000);
@@ -124,7 +128,12 @@ function move(gm) {
         return pickDirection(g, ds);
       }
     }
-    let next = Eleven.move(gm, Eleven.emptyPickerOf(ep), Eleven.directionPickerOf(dp), Eleven.resultHandlerOf(rh));
+    let next = Eleven.move(
+      gm,
+      Eleven.emptyPickerOf(ep),
+      Eleven.directionPickerOf(dp),
+      Eleven.resultHandlerOf(rh)
+    );
     next.then(move);
   } else if (game.state == 'nomoremoves') {
     finish('no more valid moves, ' + names[game.winner] + ' wins with ' + game.scores[game.winner] + ' points');
@@ -137,17 +146,17 @@ function pickEmpty(empties) {
   let es = Eleven.emptiesToJs(empties);
   return new Promise(function(resolve, reject) {
     for (let i = 0; i < es.length; i++) {
-      circles[es[i]].on('click', function(evt) {
-        circles.forEach(c => c.off('click'));
-        let index = circles.findIndex(c => c == this);
+      nodes[es[i]].disk.on('click', function(evt) {
+        nodes.forEach(n => n.disk.off('click'));
+        let index = nodes.findIndex(n => n.disk == this);
         resolve(Eleven.indexOf(index));
       });
     }
   });
 }
 
-function pickDirection(graph, directions) {
-  let dirs = Eleven.directionsToJs(directions);
+function pickDirection(g, ds) {
+  let dirs = Eleven.directionsToJs(ds);
   let keys = dirs.map(d => directionKeyMap[d]);
   return new Promise(function(resolve, reject) {
     document.addEventListener('keydown', function _handler(evt) {
@@ -163,8 +172,8 @@ function pickDirection(graph, directions) {
 
 function postPickEmptyUpdate(g, ds, p) {
   let graph = Eleven.graphToJs(g);
-  let dirs = Eleven.directionsToJs(ds);
   updateBoard(graph);
+  let dirs = Eleven.directionsToJs(ds);
   let syms = dirs.map(d => directionSymbolMap[d]);
   message(names[p] + ' to press ' + syms.join(' or '));
 }
@@ -172,15 +181,15 @@ function postPickEmptyUpdate(g, ds, p) {
 function updateBoard(graph) {
   for (let i = 0; i < graph.values.length; i++) {
     if (graph.values[i].c !== undefined) {
-      circles[i].radius((1 + graph.values[i].v / 10) * r);
-      circles[i].fill(color(colorMap[graph.values[i].c]));
+      nodes[i].disk.radius((1 + graph.values[i].v / 10) * r);
+      nodes[i].disk.fill(color(colorMap[graph.values[i].c]));
     } else {
-      circles[i].radius(r);
-      circles[i].fill(color([255,255,255,0]));
+      nodes[i].disk.radius(r);
+      nodes[i].disk.fill(color([255,255,255,0]));
     }
-    vals[i].setAttr('text', graph.values[i].v);
-    vals[i].setOffset({x: vals[i].getWidth() / 2, y: vals[i].getHeight() / 2});
-    vals[i].visible(graph.values[i].v != 0);
+    nodes[i].label.setAttr('text', graph.values[i].v);
+    nodes[i].label.setOffset({x: nodes[i].label.getWidth() / 2, y: nodes[i].label.getHeight() / 2});
+    nodes[i].label.visible(graph.values[i].v != 0);
   }
   diskLayer.draw();
 }
@@ -225,7 +234,7 @@ function updateConfigControls(minus, plus, play) {
 }
 
 function initConfigControls() {
-  let xi = width - r - 2 * str;
+  let xi = width - r;
   let minus = new Konva.Text({
     x: xi,
     y: scoreY - str,
@@ -289,7 +298,7 @@ function initConfigControls() {
 }
 
 function initPlayControls() {
-  let xi = width - r - 2 * str;
+  let xi = width - r;
   let restart = new Konva.Text({
     x: xi,
     y: scoreY - str,
@@ -346,25 +355,24 @@ function initMsg() {
 }
 
 function initBoard(edges) {
-  // circles
+  // nodes
   for (let y = cy - (3 * s); y <= cy + (3 * s); y = y + s + s) {
     for (let x = cx - (3 * s); x <= cx + (3 * s); x = x + s + s) {
-      let n = new Konva.Circle({
+      let node = new Konva.Circle({
         x: x,
         y: y,
         radius: str,
         fill: 'black'
       });
-      graphLayer.add(n);
-      let c = new Konva.Circle({
+      graphLayer.add(node);
+      let disk = new Konva.Circle({
         x: x,
         y: y,
         radius: r,
         fill: color([255,255,255,0])
       });
-      circles.push(c);
-      diskLayer.add(c);
-      let t = new Konva.Text({
+      diskLayer.add(disk);
+      let label = new Konva.Text({
         x: x,
         y: y,
         text: '0',
@@ -372,19 +380,19 @@ function initBoard(edges) {
         fontStyle: 'bold',
         fontSize: 1.5 * fontSize
       });
-      t.setOffset({x: t.getWidth() / 2, y: t.getHeight() / 2});
-      t.visible(false);
-      vals.push(t);
-      diskLayer.add(t);
+      label.setOffset({x: label.getWidth() / 2, y: label.getHeight() / 2});
+      label.visible(false);
+      diskLayer.add(label);
+      nodes.push({node: node, disk: disk, label: label});
     }
   }
-
   // arrows
   for (let d = 0; d < edges.length; d++) {
+    let dir = [];
     for (let e = 0; e < edges[d].length; e++) {
       let edge = edges[d][e];
-      let from = circles[edge.from];
-      let to = circles[edge.to];
+      let from = nodes[edge.from].node;
+      let to = nodes[edge.to].node;
       let x1 = from.attrs.x;
       let y1 = from.attrs.y;
       let x2 = to.attrs.x;
@@ -398,10 +406,10 @@ function initBoard(edges) {
         strokeWidth: 0.5
       });
       graphLayer.add(a);
-      a.setZIndex(0);
+      dir.push(a);
     }
+    arrows.push(dir);
   }
-
   graphLayer.draw();
   diskLayer.draw();
 }
