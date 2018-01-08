@@ -9,6 +9,7 @@ const size = Math.min(width, height);       // shorter side of screen
 const cx = Math.round(width / 2);           // horizontal center of screen
 const r = Math.round(size / 25);            // initial radius of disk
 const str = Math.round(r / 3);              // base stroke width factor
+const gs = Math.round(4 * str);             // gombocka spacing
 const fontSize = Math.round(r / 2);         // font size
 const s = Math.round(3 * r);                // spacing factor btw nodes
 const lx = cx - (3 * s);                    // left edge horizontal
@@ -86,7 +87,8 @@ function resume(stored) {
   move(Eleven.gameOf(game));
 }
 
-function finish(farewell) {
+function finish(game, farewell) {
+  updateScores(game.scores, game.history, game.history.length % players);
   message(farewell);
   localStorage.removeItem('game');
 }
@@ -140,9 +142,9 @@ function move(gm) {
     );
     next.then(move);
   } else if (game.state == 'nomoremoves') {
-    finish('no more valid moves, ' + names[game.winner] + ' wins');
+    finish(game, 'no more valid moves, ' + names[game.winner] + ' wins');
   } else if (game.state == 'eleven') {
-    finish(names[game.winner] + ' wins with eleven');
+    finish(game, names[game.winner] + ' wins with eleven');
   }
 }
 
@@ -185,7 +187,7 @@ function postPickEmptyUpdate(g, ds, p) {
 function updateBoard(graph) {
   for (let i = 0; i < graph.values.length; i++) {
     if (graph.values[i].c !== undefined) {
-      nodes[i].disk.radius((1 + graph.values[i].v / 10) * r);
+      nodes[i].disk.radius((1 + Math.log(graph.values[i].v) / Math.LN2 / 10) * r);
       nodes[i].disk.fill(color(colorMap[graph.values[i].c]));
     } else {
       nodes[i].disk.radius(r);
@@ -196,7 +198,7 @@ function updateBoard(graph) {
       x: nodes[i].label.getWidth() / 2,
       y: nodes[i].label.getHeight() / 2
     });
-    nodes[i].label.visible(graph.values[i] != Eleven.emptyValue);
+    nodes[i].label.visible(graph.values[i].c !== undefined);
   }
   diskLayer.draw();
 }
@@ -349,7 +351,7 @@ function initPlayControls() {
 
 function addPlayer() {
   let i = scrs.length;
-  let xi = lx + i * 3 * str;
+  let xi = lx + i * gs;
   let gombocka = createOrUpdateGombocka(i, xi);
   let score = new Konva.Text({
     name: 'score-' + i,
@@ -429,7 +431,7 @@ function createOrUpdateGombocka(i, xi) {
 
 function initMsg() {
   msg = new Konva.Text({
-    x: lx + players * 3 * str,
+    x: lx + players * gs,
     y: lineY - fontSize / 2,
     text: '',
     fontFamily: 'Dosis',
