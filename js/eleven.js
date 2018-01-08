@@ -76,7 +76,7 @@ function resume(stored) {
   // loaded, so that at restart we start with an empty board, not with
   // the last position loaded from local storage. There must be a better way!
   board = Eleven.graphOf({
-    values: graph.values.slice().fill({v: 0, c: undefined}),
+    values: graph.values.slice().fill(Eleven.emptyValue),
     edges: graph.edges
   });
   initBoard(graph.edges);
@@ -192,8 +192,11 @@ function updateBoard(graph) {
       nodes[i].disk.fill(color([255,255,255,0]));
     }
     nodes[i].label.setAttr('text', graph.values[i].v);
-    nodes[i].label.setOffset({x: nodes[i].label.getWidth() / 2, y: nodes[i].label.getHeight() / 2});
-    nodes[i].label.visible(graph.values[i].v != 0);
+    nodes[i].label.setOffset({
+      x: nodes[i].label.getWidth() / 2,
+      y: nodes[i].label.getHeight() / 2
+    });
+    nodes[i].label.visible(graph.values[i] != Eleven.emptyValue);
   }
   diskLayer.draw();
 }
@@ -202,11 +205,11 @@ function updateScores(scores, history, offset) {
   for (let p = 0; p < players; p++) {
     let scr = scrs[p].scr;
     scr.setAttr('text', '' + scores[p]);
-    scr.setOffset({ x: scr.getWidth() / 2, y: 0 });
+    scr.setOffset({x: scr.getWidth() / 2, y: 0});
     if (history[p] && history[p].dir !== undefined) {
       let lastm = scrs[(players + offset - p - 1) % players].lastm;
       lastm.setAttr('text', directionSymbolMap[history[p].dir]);
-      lastm.setOffset({ x: lastm.getWidth() / 2, y: 0 });
+      lastm.setOffset({x: lastm.getWidth() / 2, y: 0});
     } else {
       scrs[p].lastm.setAttr('text', '');
     }
@@ -459,7 +462,7 @@ function initBoard(edges) {
       let label = new Konva.Text({
         x: x,
         y: y,
-        text: '0',
+        text: '',
         fontFamily: 'Dosis',
         fontStyle: 'bold',
         fontSize: 1.5 * fontSize
