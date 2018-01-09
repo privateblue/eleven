@@ -9,7 +9,7 @@ const size = Math.min(width, height);       // shorter side of screen
 const cx = Math.round(width / 2);           // horizontal center of screen
 const r = Math.round(size / 25);            // initial radius of disk
 const str = Math.round(r / 3);              // base stroke width factor
-const gs = Math.round(4 * str);             // gombocka spacing
+const gombs = Math.round(4 * str);          // gombocka spacing
 const fontSize = Math.round(r / 2);         // font size
 const s = Math.round(3 * r);                // spacing factor btw nodes
 const lx = cx - (3 * s);                    // left edge horizontal
@@ -351,7 +351,7 @@ function initPlayControls() {
 
 function addPlayer() {
   let i = scrs.length;
-  let xi = lx + i * gs;
+  let xi = lx + i * gombs;
   let gombocka = createOrUpdateGombocka(i, xi);
   let score = new Konva.Text({
     name: 'score-' + i,
@@ -431,7 +431,7 @@ function createOrUpdateGombocka(i, xi) {
 
 function initMsg() {
   msg = new Konva.Text({
-    x: lx + players * gs,
+    x: lx + players * gombs,
     y: lineY - fontSize / 2,
     text: '',
     fontFamily: 'Dosis',
