@@ -1,8 +1,3 @@
-const directionKeyMap = [39, 37, 40, 38];
-const directionSymbolMap = ['→', '←', '↓', '↑'];
-const colorMap = [[81,134,198], [229,87,16], [190,255,117]];
-const names = ['blue', 'red', 'green']
-
 const width = window.innerWidth;
 const height = window.innerHeight;
 const size = Math.min(width, height);       // shorter side of screen
@@ -19,23 +14,43 @@ const cy = Math.round(height / 2 + lineY);  // vertical center of screen
 const ly = cy - (3 * s);                    // left edge vertical
 const ry = ly + (6 * s);                    // right edge vertical
 
-let stage = new Konva.Stage({
+
+const theOriginal = {
+  coordinates: (function() {
+    let points = [];
+    for (let y = ly; y <= ry; y = y + s + s)
+      for (let x = lx; x <= rx; x = x + s + s) points.push({x: x, y: y});
+    return points;
+  })(),
+  directions: [
+    {key: 39, symbol: '→'},
+    {key: 37, symbol: '←'},
+    {key: 40, symbol: '↓'},
+    {key: 38, symbol: '↑'},
+  ],
+  pointers: false
+}
+
+const colorMap = [[81,134,198], [229,87,16], [190,255,117]];
+const names = ['blue', 'red', 'green']
+
+const stage = new Konva.Stage({
   container: 'container',
   width: width,
   height: height
 });
-let backgroundLayer = new Konva.Layer();
-let graphLayer = new Konva.Layer();
-let diskLayer = new Konva.Layer();
-let scoreLayer = new Konva.Layer();
-let controlLayer = new Konva.Layer();
+const backgroundLayer = new Konva.Layer();
+const graphLayer = new Konva.Layer();
+const diskLayer = new Konva.Layer();
+const scoreLayer = new Konva.Layer();
+const controlLayer = new Konva.Layer();
 stage.add(backgroundLayer);
 stage.add(graphLayer);
 stage.add(diskLayer);
 stage.add(scoreLayer);
 stage.add(controlLayer);
 
-let line = new Konva.Line({
+const line = new Konva.Line({
   points: [0, lineY, width, lineY],
   stroke: 'black',
   strokeWidth: 0.1
@@ -43,6 +58,7 @@ let line = new Konva.Line({
 backgroundLayer.add(line);
 backgroundLayer.draw();
 
+let boardConfig;
 let board;
 let nodes = [];
 let arrows = [];
@@ -56,8 +72,9 @@ if (stored) resume(stored)
 else configure();
 
 function configure() {
+  boardConfig = theOriginal;
   board = Eleven.graphOriginal;
-  initBoard(Eleven.graphToJs(board).edges);
+  initBoard();
   addPlayer();
   scoreLayer.draw();
   initConfigControls();
@@ -73,6 +90,7 @@ function start() {
 function resume(stored) {
   let game = JSON.parse(stored);
   let graph = game.graph;
+  boardConfig = theOriginal;
   // TODO This is a hack to replace values with empties in the graph just
   // loaded, so that at restart we start with an empty board, not with
   // the last position loaded from local storage. There must be a better way!
@@ -80,7 +98,7 @@ function resume(stored) {
     values: graph.values.slice().fill(Eleven.emptyValue),
     edges: graph.edges
   });
-  initBoard(graph.edges);
+  initBoard();
   for (let i = 0; i < game.scores.length; i++) addPlayer();
   initMsg();
   initPlayControls();
@@ -163,13 +181,13 @@ function pickEmpty(empties) {
 
 function pickDirection(g, ds) {
   let dirs = Eleven.directionsToJs(ds);
-  let keys = dirs.map(d => directionKeyMap[d]);
+  let keys = dirs.map(d => boardConfig.directions[d].key);
   return new Promise(function(resolve, reject) {
     document.addEventListener('keydown', function _handler(evt) {
       evt.preventDefault();
       if (keys.includes(evt.keyCode)) {
         document.removeEventListener('keydown', _handler, true);
-        let direction = directionKeyMap.indexOf(evt.keyCode);
+        let direction = boardConfig.directions.findIndex(d => d.key == evt.keyCode);
         resolve(Eleven.directionOf(direction));
       }
     }, true);
@@ -180,7 +198,7 @@ function postPickEmptyUpdate(g, ds, p) {
   let graph = Eleven.graphToJs(g);
   updateBoard(graph);
   let dirs = Eleven.directionsToJs(ds);
-  let syms = dirs.map(d => directionSymbolMap[d]);
+  let syms = dirs.map(d => boardConfig.directions[d].symbol);
   message(names[p] + ' to press ' + syms.join(' or '));
 }
 
@@ -210,7 +228,7 @@ function updateScores(scores, history, offset) {
     scr.setOffset({x: scr.getWidth() / 2, y: 0});
     if (history[p] && history[p].dir !== undefined) {
       let lastm = scrs[(players + offset - p - 1) % players].lastm;
-      lastm.setAttr('text', directionSymbolMap[history[p].dir]);
+      lastm.setAttr('text', boardConfig.directions[history[p].dir].symbol);
       lastm.setOffset({x: lastm.getWidth() / 2, y: 0});
     } else {
       scrs[p].lastm.setAttr('text', '');
@@ -443,53 +461,50 @@ function initMsg() {
   scoreLayer.draw();
 }
 
-function initBoard(edges) {
+function initBoard() {
+  let graph = Eleven.graphToJs(board);
   // nodes
-  for (let y = ly; y <= ry; y = y + s + s) {
-    for (let x = lx; x <= rx; x = x + s + s) {
-      let node = new Konva.Circle({
-        x: x,
-        y: y,
-        radius: str,
-        fill: 'black'
-      });
-      graphLayer.add(node);
-      let disk = new Konva.Circle({
-        x: x,
-        y: y,
-        radius: r,
-        fill: color([255,255,255,0])
-      });
-      diskLayer.add(disk);
-      let label = new Konva.Text({
-        x: x,
-        y: y,
-        text: '',
-        fontFamily: 'Dosis',
-        fontStyle: 'bold',
-        fontSize: 1.5 * fontSize
-      });
-      label.setOffset({x: label.getWidth() / 2, y: label.getHeight() / 2});
-      label.visible(false);
-      diskLayer.add(label);
-      nodes.push({node: node, disk: disk, label: label});
-    }
-  }
+  boardConfig.coordinates.forEach(c => {
+    let node = new Konva.Circle({
+      x: c.x,
+      y: c.y,
+      radius: str,
+      fill: 'black'
+    });
+    graphLayer.add(node);
+    let disk = new Konva.Circle({
+      x: c.x,
+      y: c.y,
+      radius: r,
+      fill: color([255,255,255,0])
+    });
+    diskLayer.add(disk);
+    let label = new Konva.Text({
+      x: c.x,
+      y: c.y,
+      text: '',
+      fontFamily: 'Dosis',
+      fontStyle: 'bold',
+      fontSize: 1.5 * fontSize
+    });
+    label.setOffset({x: label.getWidth() / 2, y: label.getHeight() / 2});
+    label.visible(false);
+    diskLayer.add(label);
+    nodes.push({node: node, disk: disk, label: label});
+  });
   // arrows
-  for (let d = 0; d < edges.length; d++) {
+  for (let d = 0; d < graph.edges.length; d++) {
     let dir = [];
-    for (let e = 0; e < edges[d].length; e++) {
-      let edge = edges[d][e];
-      let from = nodes[edge.from].node;
-      let to = nodes[edge.to].node;
-      let x1 = from.attrs.x;
-      let y1 = from.attrs.y;
-      let x2 = to.attrs.x;
-      let y2 = to.attrs.y;
+    for (let e = 0; e < graph.edges[d].length; e++) {
+      let edge = graph.edges[d][e];
+      let x1 = boardConfig.coordinates[edge.from].x;
+      let y1 = boardConfig.coordinates[edge.from].y;
+      let x2 = boardConfig.coordinates[edge.to].x;
+      let y2 = boardConfig.coordinates[edge.to].y;
       let a = new Konva.Arrow({
-        points: arrowPoints(x1, y1, x2, y2, r, str),
-        pointerLength: 0,
-        pointerWidth: 0,
+        points: arrowPoints(x1, y1, x2, y2),
+        pointerLength: boardConfig.pointers ? str : 0,
+        pointerWidth: boardConfig.pointers ? str : 0,
         fill: 'black',
         stroke: 'black',
         strokeWidth: 0.5
@@ -503,20 +518,16 @@ function initBoard(edges) {
   diskLayer.draw();
 }
 
-function arrowPoints(x1, y1, x2, y2, r, str) {
-  if (x1 === x2 && y1 > y2) {
-    // up
-    return [x1, y1 - str, x2, y2 + str];
-  } else if (x1 === x2 && y2 > y1) {
-    // down
-    return [x1, y1 + str, x2, y2 - str];
-  } else if (y1 === y2 && x1 > x2) {
-    // left
-    return [x1 - str, y1, x2 + str, y2];
-  } else if (y1 === y2 && x2 > x1) {
-    // right
-    return [x1 + str, y1, x2 - str, y2];
-  }
+function arrowPoints(x1, y1, x2, y2) {
+  let a;
+  if (x1 === x2 && y1 > y2) a = -Math.PI/2
+  else if (x1 === x2 && y2 > y1) a = Math.PI/2
+  else if (y1 === y2 && x1 > x2) a = -Math.PI
+  else if (y1 === y2 && x2 > x1) a = 0
+  else a = Math.atan((y2 - y1) / (x2 - x1));
+  let dx = Math.cos(a) * str;
+  let dy = Math.sin(a) * str;
+  return [x1 + dx, y1 + dy, x2 - dx, y2 - dy];
 }
 
 function color(arr) {
