@@ -15,13 +15,13 @@ case class Graph[V](
     0 until edges.size map Direction.apply toIndexedSeq
 
   def add(dag: DAG): Graph[V] =
-    Graph(values, edges :+ dag.cut(Index(values.size - 1)).edges)
+    Graph(values, edges :+ dag.take(values.size).edges)
 
   def update(vs: IndexedSeq[V]): Graph[V] =
     Graph(vs ++ values.drop(vs.size), edges)
 
   def direction(dir: Direction): DAG =
-    DAG(Index(values.size), edges(dir.d))
+    DAG(values.size, edges(dir.d))
 
   def at(index: Index): V =
     values(index.i)
