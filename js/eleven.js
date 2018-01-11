@@ -1,26 +1,74 @@
 const width = window.innerWidth;
 const height = window.innerHeight;
 const size = Math.min(width, height);       // shorter side of screen
-const cx = Math.round(width / 2);           // horizontal center of screen
 const r = Math.round(size / 25);            // initial radius of disk
 const str = Math.round(r / 3);              // base stroke width factor
 const gombs = Math.round(4 * str);          // gombocka spacing
 const fontSize = Math.round(r / 2);         // font size
-const s = Math.round(3 * r);                // spacing factor btw nodes
-const lx = cx - (3 * s);                    // left edge horizontal
-const rx = lx + (6 * s);                    // right edge horizontal
 const lineY = Math.round(1.5 * r);          // score / control bar vertical
+const cx = Math.round(width / 2);           // horizontal center of screen
 const cy = Math.round(height / 2 + lineY);  // vertical center of screen
-const ly = cy - (3 * s);                    // left edge vertical
-const ry = ly + (6 * s);                    // right edge vertical
-
+const lx = cx - (9 * r);                    // left edge horizontal
+const rx = lx + (18 * r);                   // right edge horizontal
+const ty = cy - (9 * r);                    // top edge vertical
+const by = ty + (18 * r);                   // bottom edge vertical
 
 const theOriginal = {
   coordinates: (function() {
     let points = [];
-    for (let y = ly; y <= ry; y = y + s + s)
-      for (let x = lx; x <= rx; x = x + s + s) points.push({x: x, y: y});
+    for (let y = ty; y <= by; y = y + 6 * r)
+      for (let x = lx; x <= rx; x = x + 6 * r) points.push({x: x, y: y});
     return points;
+  })(),
+  directions: [
+    {key: 39, symbol: '→'},
+    {key: 37, symbol: '←'},
+    {key: 40, symbol: '↓'},
+    {key: 38, symbol: '↑'},
+  ],
+  pointers: false
+}
+
+const twoByTwo = {
+  coordinates: [{x: lx, y: ty}, {x: rx, y: ty}, {x: lx, y: by}, {x: rx, y: by}],
+  directions: [
+    {key: 39, symbol: '→'},
+    {key: 37, symbol: '←'},
+    {key: 40, symbol: '↓'},
+    {key: 38, symbol: '↑'},
+  ],
+  pointers: false
+}
+
+const theEye = {
+  coordinates: (function() {
+    let lx = cx - (18 * r);
+    let sx = 2 * Math.round(18 * r / 7); // rx - lx = 18 * r
+    let sy = Math.round(18 * r / 7); // by - ty = 18 * r
+    return [
+      {x: lx + 0 * sx, y: cy}, // 0
+      {x: lx + 2 * sx, y: cy - 2 * sy}, // 1
+      {x: lx + 2 * sx, y: cy + 2 * sy}, // 2
+      {x: lx + 3 * sx, y: cy - 3 * sy}, // 3
+      {x: lx + 3 * sx, y: cy - 1 * sy}, // 4
+      {x: lx + 3 * sx, y: cy + 1 * sy}, // 5
+      {x: lx + 3 * sx, y: cy + 3 * sy}, // 6
+      {x: cx, y: ty + 0 * sy}, // 7
+      {x: cx, y: ty + 1 * sy}, // 8
+      {x: cx, y: ty + 2 * sy}, // 9
+      {x: cx, y: ty + 3 * sy}, // 10
+      {x: cx, y: ty + 4 * sy}, // 11
+      {x: cx, y: ty + 5 * sy}, // 12
+      {x: cx, y: ty + 6 * sy}, // 13
+      {x: cx, y: ty + 7 * sy}, // 14
+      {x: lx + 4 * sx, y: cy - 3 * sy}, // 15
+      {x: lx + 4 * sx, y: cy - 1 * sy}, // 16
+      {x: lx + 4 * sx, y: cy + 1 * sy}, // 17
+      {x: lx + 4 * sx, y: cy + 3 * sy}, // 18
+      {x: lx + 5 * sx, y: cy - 2 * sy}, // 19
+      {x: lx + 5 * sx, y: cy + 2 * sy}, // 20
+      {x: lx + 7 * sx, y: cy}, // 21
+    ];
   })(),
   directions: [
     {key: 39, symbol: '→'},
@@ -72,8 +120,9 @@ if (stored) resume(stored)
 else configure();
 
 function configure() {
-  boardConfig = theOriginal;
-  board = Eleven.graphOriginal;
+  boardConfig = theEye;
+  board = Eleven.theEye;
+  console.log(Eleven.graphToJs(board))
   initBoard();
   addPlayer();
   scoreLayer.draw();
@@ -90,7 +139,7 @@ function start() {
 function resume(stored) {
   let game = JSON.parse(stored);
   let graph = game.graph;
-  boardConfig = theOriginal;
+  boardConfig = theEye;
   // TODO This is a hack to replace values with empties in the graph just
   // loaded, so that at restart we start with an empty board, not with
   // the last position loaded from local storage. There must be a better way!
@@ -525,8 +574,8 @@ function arrowPoints(x1, y1, x2, y2) {
   else if (y1 === y2 && x1 > x2) a = -Math.PI
   else if (y1 === y2 && x2 > x1) a = 0
   else a = Math.atan((y2 - y1) / (x2 - x1));
-  let dx = Math.cos(a) * str;
-  let dy = Math.sin(a) * str;
+  let dx = x2 < x1 ? -Math.cos(a) * str : Math.cos(a) * str;
+  let dy = x2 < x1 ? -Math.sin(a) * str : Math.sin(a) * str;
   return [x1 + dx, y1 + dy, x2 - dx, y2 - dy];
 }
 

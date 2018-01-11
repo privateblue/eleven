@@ -15,7 +15,11 @@ import scala.scalajs.js.JSConverters._
 @JSExportTopLevel("Eleven")
 @JSExportAll
 object Eleven {
-  def graphOriginal = Graphs.original
+  def theOriginal = Graphs.theOriginal
+
+  def twoByTwo = Graphs.twoByTwo
+
+  def theEye = Graphs.theEye
 
   def start(graph: Graph[Value], players: Int) = Game.start(graph, players)
 

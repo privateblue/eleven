@@ -18,7 +18,7 @@ object OriginalConsole {
   val machines = List(0, 1)
 
   def main(args: Array[String]): Unit = {
-    val started = Game.start(Graphs.original, players)
+    val started = Game.start(Graphs.theOriginal, players)
     Await.ready(move(started), Duration.Inf)
   }
 

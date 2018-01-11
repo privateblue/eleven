@@ -19,7 +19,7 @@ case class DAG(next: Index, edges: Set[(Index, Index)]) {
 
   lazy val ends: Set[Index] = targetMap.keySet diff sourceMap.keySet
 
-  def add(neighbours: Set[Int] = Set.empty): DAG = {
+  def add(neighbours: Int*): DAG = {
     val es = edges ++ neighbours.filter(_ < next.i).map(Index(_) -> next)
     DAG(Index(next.i + 1), es)
   }
