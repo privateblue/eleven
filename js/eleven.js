@@ -1,25 +1,36 @@
 const width = window.innerWidth;
 const height = window.innerHeight;
-const size = Math.min(width, height);       // shorter side of screen
-const r = Math.round(size / 25);            // initial radius of disk
-const str = Math.round(r / 3);              // base stroke width factor
-const gombs = Math.round(4 * str);          // gombocka spacing
-const fontSize = Math.round(r / 2);         // font size
-const lineY = Math.round(1.5 * r);          // score / control bar vertical
-const cx = Math.round(width / 2);           // horizontal center of screen
-const cy = Math.round(height / 2 + lineY);  // vertical center of screen
-const lx = cx - (9 * r);                    // left edge horizontal
-const rx = lx + (18 * r);                   // right edge horizontal
-const ty = cy - (9 * r);                    // top edge vertical
-const by = ty + (18 * r);                   // bottom edge vertical
+const size = Math.min(width, height);   // shorter side of screen
+const fontSize = Math.round(size / 50); // font size
+const str = Math.round(size / 75);      // base stroke width factor
+const sp = Math.round(6 * size / 100);  // score bar spacing factor
+const cx = Math.round(width / 2);       // horizontal center of screen
+const cy = Math.round(height / 2 + sp); // vertical center of screen
 
 const theOriginal = {
-  coordinates: (function() {
+  get r () {
+    return Math.round(size / 25);
+  },
+  get lx () {
+    return cx - (9 * this.r);
+  },
+  get rx () {
+    return cx + (9 * this.r);
+  },
+  get ty () {
+    return cy - (9 * this.r);
+  },
+  get by () {
+    return cy + (9 * this.r);
+  },
+  graph: Eleven.theOriginal,
+  get coordinates () {
     let points = [];
-    for (let y = ty; y <= by; y = y + 6 * r)
-      for (let x = lx; x <= rx; x = x + 6 * r) points.push({x: x, y: y});
+    for (let y = this.ty; y <= this.by; y = y + 6 * this.r)
+      for (let x = this.lx; x <= this.rx; x = x + 6 * this.r)
+        points.push({x: x, y: y});
     return points;
-  })(),
+  },
   directions: [
     {key: 39, symbol: '→'},
     {key: 37, symbol: '←'},
@@ -30,7 +41,28 @@ const theOriginal = {
 }
 
 const twoByTwo = {
-  coordinates: [{x: lx, y: ty}, {x: rx, y: ty}, {x: lx, y: by}, {x: rx, y: by}],
+  get r () {
+    return Math.round(size / 25);
+  },
+  get lx () {
+    return cx - (9 * this.r);
+  },
+  get rx () {
+    return cx + (9 * this.r);
+  },
+  get ty () {
+    return cy - (9 * this.r);
+  },
+  get by () {
+    return cy + (9 * this.r);
+  },
+  graph: Eleven.twoByTwo,
+  get coordinates () {
+      return [
+      {x: this.lx, y: this.ty}, {x: this.rx, y: this.ty},
+      {x: this.lx, y: this.by}, {x: this.rx, y: this.by}
+    ];
+  },
   directions: [
     {key: 39, symbol: '→'},
     {key: 37, symbol: '←'},
@@ -41,35 +73,50 @@ const twoByTwo = {
 }
 
 const theEye = {
-  coordinates: (function() {
-    let lx = cx - (18 * r);
-    let sx = 2 * Math.round(18 * r / 7); // rx - lx = 18 * r
-    let sy = Math.round(18 * r / 7); // by - ty = 18 * r
+  get r () {
+    return Math.round(size / 25);
+  },
+  get lx () {
+    return cx - (18 * this.r);
+  },
+  get rx () {
+    return cx + (18 * this.r);
+  },
+  get ty () {
+    return cy - (9 * this.r);
+  },
+  get by () {
+    return cy + (9 * this.r);
+  },
+  graph: Eleven.theEye,
+  get coordinates () {
+    let sx = 2 * Math.round(18 * this.r / 7); // rx - lx = 18 * r
+    let sy = Math.round(18 * this.r / 7); // by - ty = 18 * r
     return [
-      {x: lx + 0 * sx, y: cy}, // 0
-      {x: lx + 2 * sx, y: cy - 2 * sy}, // 1
-      {x: lx + 2 * sx, y: cy + 2 * sy}, // 2
-      {x: lx + 3 * sx, y: cy - 3 * sy}, // 3
-      {x: lx + 3 * sx, y: cy - 1 * sy}, // 4
-      {x: lx + 3 * sx, y: cy + 1 * sy}, // 5
-      {x: lx + 3 * sx, y: cy + 3 * sy}, // 6
-      {x: cx, y: ty + 0 * sy}, // 7
-      {x: cx, y: ty + 1 * sy}, // 8
-      {x: cx, y: ty + 2 * sy}, // 9
-      {x: cx, y: ty + 3 * sy}, // 10
-      {x: cx, y: ty + 4 * sy}, // 11
-      {x: cx, y: ty + 5 * sy}, // 12
-      {x: cx, y: ty + 6 * sy}, // 13
-      {x: cx, y: ty + 7 * sy}, // 14
-      {x: lx + 4 * sx, y: cy - 3 * sy}, // 15
-      {x: lx + 4 * sx, y: cy - 1 * sy}, // 16
-      {x: lx + 4 * sx, y: cy + 1 * sy}, // 17
-      {x: lx + 4 * sx, y: cy + 3 * sy}, // 18
-      {x: lx + 5 * sx, y: cy - 2 * sy}, // 19
-      {x: lx + 5 * sx, y: cy + 2 * sy}, // 20
-      {x: lx + 7 * sx, y: cy}, // 21
+      {x: cx - 3 * sx, y: cy}, // 0
+      {x: cx - 2 * sx, y: cy - 2 * sy}, // 1
+      {x: cx - 2 * sx, y: cy + 2 * sy}, // 2
+      {x: cx - 1 * sx, y: cy - 3 * sy}, // 3
+      {x: cx - 1 * sx, y: cy - 1 * sy}, // 4
+      {x: cx - 1 * sx, y: cy + 1 * sy}, // 5
+      {x: cx - 1 * sx, y: cy + 3 * sy}, // 6
+      {x: cx, y: this.ty + 0 * sy}, // 7
+      {x: cx, y: this.ty + 1 * sy}, // 8
+      {x: cx, y: this.ty + 2 * sy}, // 9
+      {x: cx, y: this.ty + 3 * sy}, // 10
+      {x: cx, y: this.ty + 4 * sy}, // 11
+      {x: cx, y: this.ty + 5 * sy}, // 12
+      {x: cx, y: this.ty + 6 * sy}, // 13
+      {x: cx, y: this.ty + 7 * sy}, // 14
+      {x: cx + 1 * sx, y: cy - 3 * sy}, // 15
+      {x: cx + 1 * sx, y: cy - 1 * sy}, // 16
+      {x: cx + 1 * sx, y: cy + 1 * sy}, // 17
+      {x: cx + 1 * sx, y: cy + 3 * sy}, // 18
+      {x: cx + 2 * sx, y: cy - 2 * sy}, // 19
+      {x: cx + 2 * sx, y: cy + 2 * sy}, // 20
+      {x: cx + 3 * sx, y: cy}, // 21
     ];
-  })(),
+  },
   directions: [
     {key: 39, symbol: '→'},
     {key: 37, symbol: '←'},
@@ -99,14 +146,13 @@ stage.add(scoreLayer);
 stage.add(controlLayer);
 
 const line = new Konva.Line({
-  points: [0, lineY, width, lineY],
+  points: [0, sp, width, sp],
   stroke: 'black',
   strokeWidth: 0.1
 });
 backgroundLayer.add(line);
 backgroundLayer.draw();
 
-let boardConfig;
 let board;
 let nodes = [];
 let arrows = [];
@@ -120,9 +166,7 @@ if (stored) resume(stored)
 else configure();
 
 function configure() {
-  boardConfig = theEye;
-  board = Eleven.theEye;
-  console.log(Eleven.graphToJs(board))
+  board = theEye;
   initBoard();
   addPlayer();
   scoreLayer.draw();
@@ -132,21 +176,13 @@ function configure() {
 function start() {
   initMsg();
   initPlayControls();
-  let start = Eleven.start(board, players);
+  let start = Eleven.start(board.graph, players);
   move(start);
 }
 
 function resume(stored) {
   let game = JSON.parse(stored);
-  let graph = game.graph;
-  boardConfig = theEye;
-  // TODO This is a hack to replace values with empties in the graph just
-  // loaded, so that at restart we start with an empty board, not with
-  // the last position loaded from local storage. There must be a better way!
-  board = Eleven.graphOf({
-    values: graph.values.slice().fill(Eleven.emptyValue),
-    edges: graph.edges
-  });
+  board = theEye;
   initBoard();
   for (let i = 0; i < game.scores.length; i++) addPlayer();
   initMsg();
@@ -230,13 +266,13 @@ function pickEmpty(empties) {
 
 function pickDirection(g, ds) {
   let dirs = Eleven.directionsToJs(ds);
-  let keys = dirs.map(d => boardConfig.directions[d].key);
+  let keys = dirs.map(d => board.directions[d].key);
   return new Promise(function(resolve, reject) {
     document.addEventListener('keydown', function _handler(evt) {
       evt.preventDefault();
       if (keys.includes(evt.keyCode)) {
         document.removeEventListener('keydown', _handler, true);
-        let direction = boardConfig.directions.findIndex(d => d.key == evt.keyCode);
+        let direction = board.directions.findIndex(d => d.key == evt.keyCode);
         resolve(Eleven.directionOf(direction));
       }
     }, true);
@@ -247,17 +283,17 @@ function postPickEmptyUpdate(g, ds, p) {
   let graph = Eleven.graphToJs(g);
   updateBoard(graph);
   let dirs = Eleven.directionsToJs(ds);
-  let syms = dirs.map(d => boardConfig.directions[d].symbol);
+  let syms = dirs.map(d => board.directions[d].symbol);
   message(names[p] + ' to press ' + syms.join(' or '));
 }
 
 function updateBoard(graph) {
   for (let i = 0; i < graph.values.length; i++) {
     if (graph.values[i].c !== undefined) {
-      nodes[i].disk.radius((1 + Math.log(graph.values[i].v) / Math.LN2 / 10) * r);
+      nodes[i].disk.radius((1 + Math.log(graph.values[i].v) / Math.LN2 / 10) * board.r);
       nodes[i].disk.fill(color(colorMap[graph.values[i].c]));
     } else {
-      nodes[i].disk.radius(r);
+      nodes[i].disk.radius(board.r);
       nodes[i].disk.fill(color([255,255,255,0]));
     }
     nodes[i].label.setAttr('text', graph.values[i].v);
@@ -277,7 +313,7 @@ function updateScores(scores, history, offset) {
     scr.setOffset({x: scr.getWidth() / 2, y: 0});
     if (history[p] && history[p].dir !== undefined) {
       let lastm = scrs[(players + offset - p - 1) % players].lastm;
-      lastm.setAttr('text', boardConfig.directions[history[p].dir].symbol);
+      lastm.setAttr('text', board.directions[history[p].dir].symbol);
       lastm.setOffset({x: lastm.getWidth() / 2, y: 0});
     } else {
       scrs[p].lastm.setAttr('text', '');
@@ -310,10 +346,10 @@ function updateConfigControls(minus, plus, play) {
 }
 
 function initConfigControls() {
-  let xi = rx;
+  let xi = board.rx;
   let minus = new Konva.Text({
     x: xi,
-    y: lineY - str,
+    y: sp - str,
     width: 2 * str,
     height: 2 * str,
     align: 'center',
@@ -327,7 +363,7 @@ function initConfigControls() {
   controlLayer.add(minus);
   let plus = new Konva.Text({
     x: xi,
-    y: lineY - str,
+    y: sp - str,
     width: 2 * str,
     height: 2 * str,
     align: 'center',
@@ -341,7 +377,7 @@ function initConfigControls() {
   controlLayer.add(plus);
   let play = new Konva.Text({
     x: xi,
-    y: lineY - str,
+    y: sp - str,
     width: 2 * str,
     height: 2 * str,
     align: 'center',
@@ -374,10 +410,10 @@ function initConfigControls() {
 }
 
 function initPlayControls() {
-  let xi = rx;
+  let xi = board.rx;
   let restart = new Konva.Text({
     x: xi,
-    y: lineY - str,
+    y: sp - str,
     width: 2 * str,
     height: 2 * str,
     align: 'center',
@@ -390,7 +426,7 @@ function initPlayControls() {
   controlLayer.add(restart);
   let newgame = new Konva.Text({
     x: xi,
-    y: lineY - str,
+    y: sp - str,
     width: 2 * str,
     height: 2 * str,
     align: 'center',
@@ -403,7 +439,7 @@ function initPlayControls() {
   });
   controlLayer.add(newgame);
   restart.on('click', function(evt) {
-    let start = Eleven.start(board, players);
+    let start = Eleven.start(board.graph, players);
     localStorage.setItem('game', JSON.stringify(Eleven.gameToJs(start)));
     location.reload(true);
   });
@@ -418,12 +454,12 @@ function initPlayControls() {
 
 function addPlayer() {
   let i = scrs.length;
-  let xi = lx + i * gombs;
+  let xi = board.lx + i * sp;
   let gombocka = createOrUpdateGombocka(i, xi);
   let score = new Konva.Text({
     name: 'score-' + i,
     x:  xi,
-    y: lineY - fontSize - 2 * str,
+    y: sp - fontSize - 2 * str,
     text: '',
     fontFamily: 'Dosis',
     fontStyle: 'bold',
@@ -435,7 +471,7 @@ function addPlayer() {
   let lastm = new Konva.Text({
     name: 'lastm-' + i,
     x: xi,
-    y: lineY + 2 * str,
+    y: sp + 2 * str,
     text: '',
     fontFamily: 'Dosis',
     fontStyle: 'bold',
@@ -464,7 +500,7 @@ function createOrUpdateGombocka(i, xi) {
     gombocka = new Konva.Rect({
       name: 'gombocka-' + i,
       x: xi - str,
-      y: lineY - str,
+      y: sp - str,
       width: 2 * str,
       height: 2 * str,
       fill: color(colorMap[i])
@@ -478,7 +514,7 @@ function createOrUpdateGombocka(i, xi) {
     gombocka = new Konva.Circle({
       name: 'gombocka-' + i,
       x: xi,
-      y: lineY,
+      y: sp,
       radius: str,
       fill: color(colorMap[i])
     });
@@ -498,8 +534,8 @@ function createOrUpdateGombocka(i, xi) {
 
 function initMsg() {
   msg = new Konva.Text({
-    x: lx + players * gombs,
-    y: lineY - fontSize / 2,
+    x: board.lx + players * sp,
+    y: sp - fontSize / 2,
     text: '',
     fontFamily: 'Dosis',
     fontStyle: 'bold',
@@ -511,9 +547,9 @@ function initMsg() {
 }
 
 function initBoard() {
-  let graph = Eleven.graphToJs(board);
+  let graph = Eleven.graphToJs(board.graph);
   // nodes
-  boardConfig.coordinates.forEach(c => {
+  board.coordinates.forEach(c => {
     let node = new Konva.Circle({
       x: c.x,
       y: c.y,
@@ -524,7 +560,7 @@ function initBoard() {
     let disk = new Konva.Circle({
       x: c.x,
       y: c.y,
-      radius: r,
+      radius: board.r,
       fill: color([255,255,255,0])
     });
     diskLayer.add(disk);
@@ -546,14 +582,14 @@ function initBoard() {
     let dir = [];
     for (let e = 0; e < graph.edges[d].length; e++) {
       let edge = graph.edges[d][e];
-      let x1 = boardConfig.coordinates[edge.from].x;
-      let y1 = boardConfig.coordinates[edge.from].y;
-      let x2 = boardConfig.coordinates[edge.to].x;
-      let y2 = boardConfig.coordinates[edge.to].y;
+      let x1 = board.coordinates[edge.from].x;
+      let y1 = board.coordinates[edge.from].y;
+      let x2 = board.coordinates[edge.to].x;
+      let y2 = board.coordinates[edge.to].y;
       let a = new Konva.Arrow({
         points: arrowPoints(x1, y1, x2, y2),
-        pointerLength: boardConfig.pointers ? str : 0,
-        pointerWidth: boardConfig.pointers ? str : 0,
+        pointerLength: board.pointers ? str : 0,
+        pointerWidth: board.pointers ? str : 0,
         fill: 'black',
         stroke: 'black',
         strokeWidth: 0.5
