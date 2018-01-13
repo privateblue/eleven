@@ -8,9 +8,7 @@ const cx = Math.round(width / 2);       // horizontal center of screen
 const cy = Math.round(height / 2 + sp); // vertical center of screen
 
 const theOriginal = {
-  get r () {
-    return Math.round(size / 25);
-  },
+  r: Math.round(size / 25),
   get lx () {
     return cx - (9 * this.r);
   },
@@ -41,9 +39,7 @@ const theOriginal = {
 }
 
 const twoByTwo = {
-  get r () {
-    return Math.round(size / 25);
-  },
+  r: Math.round(size / 25),
   get lx () {
     return cx - (9 * this.r);
   },
@@ -73,9 +69,7 @@ const twoByTwo = {
 }
 
 const theEye = {
-  get r () {
-    return Math.round(size / 25);
-  },
+  r: Math.round(size / 25),
   get lx () {
     return cx - (18 * this.r);
   },
