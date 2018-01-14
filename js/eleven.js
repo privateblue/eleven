@@ -30,10 +30,10 @@ const theOriginal = {
     return points;
   },
   directions: [
-    {key: 39, symbol: '→'},
-    {key: 37, symbol: '←'},
-    {key: 40, symbol: '↓'},
-    {key: 38, symbol: '↑'},
+    {key: 39, symbol: '→', horizontal: true},
+    {key: 37, symbol: '←', horizontal: true},
+    {key: 40, symbol: '↓', horizontal: false},
+    {key: 38, symbol: '↑', horizontal: false},
   ],
   pointers: false
 }
@@ -60,10 +60,10 @@ const twoByTwo = {
     ];
   },
   directions: [
-    {key: 39, symbol: '→'},
-    {key: 37, symbol: '←'},
-    {key: 40, symbol: '↓'},
-    {key: 38, symbol: '↑'},
+    {key: 39, symbol: '→', horizontal: true},
+    {key: 37, symbol: '←', horizontal: true},
+    {key: 40, symbol: '↓', horizontal: false},
+    {key: 38, symbol: '↑', horizontal: false},
   ],
   pointers: false
 }
@@ -112,10 +112,10 @@ const theEye = {
     ];
   },
   directions: [
-    {key: 39, symbol: '→'},
-    {key: 37, symbol: '←'},
-    {key: 40, symbol: '↓'},
-    {key: 38, symbol: '↑'},
+    {key: 39, symbol: '→', horizontal: true},
+    {key: 37, symbol: '←', horizontal: true},
+    {key: 40, symbol: '↓', horizontal: false},
+    {key: 38, symbol: '↑', horizontal: false},
   ],
   pointers: false
 }
@@ -580,8 +580,18 @@ function initBoard() {
       let y1 = board.coordinates[edge.from].y;
       let x2 = board.coordinates[edge.to].x;
       let y2 = board.coordinates[edge.to].y;
+      let points;
+      if (board.directions[d].horizontal) {
+        let offset = x2 > x1 ? str : -str;
+        let middle = (x2 - x1) / 2 + x1;
+        points = [x1 + offset, y1, middle, y1, middle, y2, x2 - offset, y2];
+      } else {
+        let offset = y2 > y1 ? str : -str;
+        let middle = (y2 - y1) / 2 + y1;
+        points = [x1, y1 + offset, x1, middle, x2, middle, x2, y2 - offset];
+      }
       let a = new Konva.Arrow({
-        points: arrowPoints(x1, y1, x2, y2),
+        points: points,
         pointerLength: board.pointers ? str : 0,
         pointerWidth: board.pointers ? str : 0,
         fill: 'black',
@@ -595,18 +605,6 @@ function initBoard() {
   }
   graphLayer.draw();
   diskLayer.draw();
-}
-
-function arrowPoints(x1, y1, x2, y2) {
-  let a;
-  if (x1 === x2 && y1 > y2) a = -Math.PI/2
-  else if (x1 === x2 && y2 > y1) a = Math.PI/2
-  else if (y1 === y2 && x1 > x2) a = -Math.PI
-  else if (y1 === y2 && x2 > x1) a = 0
-  else a = Math.atan((y2 - y1) / (x2 - x1));
-  let dx = x2 < x1 ? -Math.cos(a) * str : Math.cos(a) * str;
-  let dy = x2 < x1 ? -Math.sin(a) * str : Math.sin(a) * str;
-  return [x1 + dx, y1 + dy, x2 - dx, y2 - dy];
 }
 
 function color(arr) {
