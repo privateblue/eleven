@@ -1,11 +1,11 @@
 const width = window.innerWidth;
 const height = window.innerHeight;
-const size = Math.min(width, height);   // shorter side of screen
-const fontSize = Math.round(size / 50); // font size
-const str = Math.round(size / 75);      // base stroke width factor
-const sp = Math.round(6 * size / 100);  // score bar spacing factor
-const cx = Math.round(width / 2);       // horizontal center of screen
-const cy = Math.round(height / 2 + sp); // vertical center of screen
+const size = Math.min(width, height);     // shorter side of screen
+const fontSize = Math.round(size / 50);   // font size
+const str = Math.round(size / 75);        // base stroke width factor
+const sbsp = Math.round(6 * size / 100);  // score bar spacing factor
+const cx = Math.round(width / 2);         // horizontal center of screen
+const cy = Math.round(height / 2 + sbsp); // vertical center of screen
 
 const theOriginal = {
   r: Math.round(size / 25),
@@ -175,7 +175,7 @@ stage.add(scoreLayer);
 stage.add(controlLayer);
 
 const line = new Konva.Line({
-  points: [0, sp, width, sp],
+  points: [0, sbsp, width, sbsp],
   stroke: 'black',
   strokeWidth: 0.1
 });
@@ -381,7 +381,7 @@ function initConfigControls() {
   let xi = width - board.r;
   let minus = new Konva.Text({
     x: xi,
-    y: sp - str,
+    y: sbsp - str,
     width: 2 * str,
     height: 2 * str,
     align: 'center',
@@ -395,7 +395,7 @@ function initConfigControls() {
   controlLayer.add(minus);
   let plus = new Konva.Text({
     x: xi,
-    y: sp - str,
+    y: sbsp - str,
     width: 2 * str,
     height: 2 * str,
     align: 'center',
@@ -409,7 +409,7 @@ function initConfigControls() {
   controlLayer.add(plus);
   let play = new Konva.Text({
     x: xi,
-    y: sp - str,
+    y: sbsp - str,
     width: 2 * str,
     height: 2 * str,
     align: 'center',
@@ -489,7 +489,7 @@ function initPlayControls() {
   let xi = width - board.r;
   let restart = new Konva.Text({
     x: xi,
-    y: sp - str,
+    y: sbsp - str,
     width: 2 * str,
     height: 2 * str,
     align: 'center',
@@ -502,7 +502,7 @@ function initPlayControls() {
   controlLayer.add(restart);
   let newgame = new Konva.Text({
     x: xi,
-    y: sp - str,
+    y: sbsp - str,
     width: 2 * str,
     height: 2 * str,
     align: 'center',
@@ -530,12 +530,12 @@ function initPlayControls() {
 
 function addPlayer() {
   let i = scrs.length;
-  let xi = board.r + i * sp;
+  let xi = board.r + i * sbsp;
   let gombocka = createOrUpdateGombocka(i, xi);
   let score = new Konva.Text({
     name: 'score-' + i,
     x:  xi,
-    y: sp - fontSize - 2 * str,
+    y: sbsp - fontSize - 2 * str,
     text: '',
     fontFamily: 'Dosis',
     fontStyle: 'bold',
@@ -547,7 +547,7 @@ function addPlayer() {
   let lastm = new Konva.Text({
     name: 'lastm-' + i,
     x: xi,
-    y: sp + 2 * str,
+    y: sbsp + 2 * str,
     text: '',
     fontFamily: 'Dosis',
     fontStyle: 'bold',
@@ -576,7 +576,7 @@ function createOrUpdateGombocka(i, xi) {
     gombocka = new Konva.Rect({
       name: 'gombocka-' + i,
       x: xi - str,
-      y: sp - str,
+      y: sbsp - str,
       width: 2 * str,
       height: 2 * str,
       fill: color(colors[i])
@@ -590,7 +590,7 @@ function createOrUpdateGombocka(i, xi) {
     gombocka = new Konva.Circle({
       name: 'gombocka-' + i,
       x: xi,
-      y: sp,
+      y: sbsp,
       radius: str,
       fill: color(colors[i])
     });
@@ -610,8 +610,8 @@ function createOrUpdateGombocka(i, xi) {
 
 function initMsg() {
   msg = new Konva.Text({
-    x: board.r + players * sp,
-    y: sp - fontSize / 2,
+    x: board.r + players * sbsp,
+    y: sbsp - fontSize / 2,
     text: '',
     fontFamily: 'Dosis',
     fontStyle: 'bold',
