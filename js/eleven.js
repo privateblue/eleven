@@ -21,7 +21,7 @@ const theOriginal = {
   get by () {
     return cy + (9 * this.r);
   },
-  graph: Eleven.theOriginal,
+  graph: Eleven.graphToJs(Eleven.theOriginal),
   get coordinates () {
     let points = [];
     for (let y = this.ty; y <= this.by; y = y + 6 * this.r)
@@ -52,7 +52,7 @@ const twoByTwo = {
   get by () {
     return cy + (9 * this.r);
   },
-  graph: Eleven.twoByTwo,
+  graph: Eleven.graphToJs(Eleven.twoByTwo),
   get coordinates () {
       return [
       {x: this.lx, y: this.ty}, {x: this.rx, y: this.ty},
@@ -82,10 +82,10 @@ const theEye = {
   get by () {
     return cy + (9 * this.r);
   },
-  graph: Eleven.theEye,
+  graph: Eleven.graphToJs(Eleven.theEye),
   get coordinates () {
-    let sx = 2 * Math.round(18 * this.r / 7); // rx - lx = 18 * r
-    let sy = Math.round(18 * this.r / 7); // by - ty = 18 * r
+    let sx = 2 * Math.round(18 * this.r / 6);
+    let sy = Math.round(18 * this.r / 7);
     return [
       {x: cx - 3 * sx, y: cy}, // 0
       {x: cx - 2 * sx, y: cy - 2 * sy}, // 1
@@ -120,7 +120,8 @@ const theEye = {
   pointers: false
 }
 
-const colorMap = [[81,134,198], [229,87,16], [190,255,117]];
+const boards = [theOriginal, twoByTwo, theEye];
+const colors = [[81,134,198], [229,87,16], [190,255,117]];
 const names = ['blue', 'red', 'green']
 
 const stage = new Konva.Stage({
@@ -148,8 +149,8 @@ backgroundLayer.add(line);
 backgroundLayer.draw();
 
 let board;
-let nodes = [];
-let arrows = [];
+let nodes;
+let arrows;
 let scrs = [];
 let players = 0;
 let machines = [];
@@ -160,7 +161,7 @@ if (stored) resume(stored)
 else configure();
 
 function configure() {
-  board = theEye;
+  board = theOriginal;
   initBoard();
   addPlayer();
   scoreLayer.draw();
@@ -168,15 +169,17 @@ function configure() {
 }
 
 function start() {
+  localStorage.setItem('board', JSON.stringify(board));
+  initBoard();
   initMsg();
   initPlayControls();
-  let start = Eleven.start(board.graph, players);
+  let start = Eleven.start(Eleven.graphOf(board.graph), players);
   move(start);
 }
 
 function resume(stored) {
   let game = JSON.parse(stored);
-  board = theEye;
+  board = JSON.parse(localStorage.getItem('board'));
   initBoard();
   for (let i = 0; i < game.scores.length; i++) addPlayer();
   initMsg();
@@ -188,6 +191,7 @@ function finish(game, farewell) {
   updateScores(game.scores, game.history, game.history.length % players);
   message(farewell);
   localStorage.removeItem('game');
+  localStorage.removeItem('board');
 }
 
 function move(gm) {
@@ -285,7 +289,7 @@ function updateBoard(graph) {
   for (let i = 0; i < graph.values.length; i++) {
     if (graph.values[i].c !== undefined) {
       nodes[i].disk.radius((1 + Math.log(graph.values[i].v) / Math.LN2 / 10) * board.r);
-      nodes[i].disk.fill(color(colorMap[graph.values[i].c]));
+      nodes[i].disk.fill(color(colors[graph.values[i].c]));
     } else {
       nodes[i].disk.radius(board.r);
       nodes[i].disk.fill(color([255,255,255,0]));
@@ -340,7 +344,7 @@ function updateConfigControls(minus, plus, play) {
 }
 
 function initConfigControls() {
-  let xi = board.rx;
+  let xi = width - board.r;
   let minus = new Konva.Text({
     x: xi,
     y: sp - str,
@@ -383,6 +387,34 @@ function initConfigControls() {
     fill: 'black'
   });
   controlLayer.add(play);
+  let previousB = new Konva.Text({
+    x: board.r,
+    y: cy,
+    width: 2 * str,
+    height: 2 * str,
+    align: 'center',
+    text: '↶',
+    fontFamily: 'Dosis',
+    fontStyle: 'bold',
+    fontSize: 1.2 * fontSize,
+    fill: 'black'
+  });
+  controlLayer.add(previousB);
+  previousB.offsetX(previousB.getWidth() / 2);
+  let nextB = new Konva.Text({
+    x: width - board.r,
+    y: cy,
+    width: 2 * str,
+    height: 2 * str,
+    align: 'center',
+    text: '↷',
+    fontFamily: 'Dosis',
+    fontStyle: 'bold',
+    fontSize: 1.2 * fontSize,
+    fill: 'black'
+  });
+  controlLayer.add(nextB);
+  nextB.offsetX(nextB.getWidth() / 2);
   plus.on('click', function(evt) {
     addPlayer();
     scoreLayer.draw();
@@ -397,14 +429,30 @@ function initConfigControls() {
     minus.hide();
     plus.hide();
     play.hide();
+    previousB.hide();
+    nextB.hide();
     controlLayer.draw();
     start();
+  });
+  previousB.on('click', function(evt) {
+    let i = (boards.indexOf(board) + boards.length - 1) % boards.length;
+    board = boards[i];
+    graphLayer.removeChildren();
+    diskLayer.removeChildren();
+    initBoard();
+  });
+  nextB.on('click', function(evt) {
+    let i = (boards.indexOf(board) + 1) % boards.length;
+    board = boards[i];
+    graphLayer.removeChildren();
+    diskLayer.removeChildren();
+    initBoard();
   });
   updateConfigControls(minus, plus, play);
 }
 
 function initPlayControls() {
-  let xi = board.rx;
+  let xi = width - board.r;
   let restart = new Konva.Text({
     x: xi,
     y: sp - str,
@@ -433,7 +481,7 @@ function initPlayControls() {
   });
   controlLayer.add(newgame);
   restart.on('click', function(evt) {
-    let start = Eleven.start(board.graph, players);
+    let start = Eleven.start(Eleven.graphOf(board.graph), players);
     localStorage.setItem('game', JSON.stringify(Eleven.gameToJs(start)));
     location.reload(true);
   });
@@ -448,7 +496,7 @@ function initPlayControls() {
 
 function addPlayer() {
   let i = scrs.length;
-  let xi = board.lx + i * sp;
+  let xi = board.r + i * sp;
   let gombocka = createOrUpdateGombocka(i, xi);
   let score = new Konva.Text({
     name: 'score-' + i,
@@ -497,7 +545,7 @@ function createOrUpdateGombocka(i, xi) {
       y: sp - str,
       width: 2 * str,
       height: 2 * str,
-      fill: color(colorMap[i])
+      fill: color(colors[i])
     })
     gombocka.on('click', function(evt) {
       machines = machines.filter(p => p !== i);
@@ -510,7 +558,7 @@ function createOrUpdateGombocka(i, xi) {
       x: xi,
       y: sp,
       radius: str,
-      fill: color(colorMap[i])
+      fill: color(colors[i])
     });
     gombocka.on('click', function(evt) {
       machines.push(i);
@@ -528,7 +576,7 @@ function createOrUpdateGombocka(i, xi) {
 
 function initMsg() {
   msg = new Konva.Text({
-    x: board.lx + players * sp,
+    x: board.r + players * sp,
     y: sp - fontSize / 2,
     text: '',
     fontFamily: 'Dosis',
@@ -541,7 +589,8 @@ function initMsg() {
 }
 
 function initBoard() {
-  let graph = Eleven.graphToJs(board.graph);
+  nodes = [];
+  arrows = [];
   // nodes
   board.coordinates.forEach(c => {
     let node = new Konva.Circle({
@@ -572,10 +621,10 @@ function initBoard() {
     nodes.push({node: node, disk: disk, label: label});
   });
   // arrows
-  for (let d = 0; d < graph.edges.length; d++) {
+  for (let d = 0; d < board.graph.edges.length; d++) {
     let dir = [];
-    for (let e = 0; e < graph.edges[d].length; e++) {
-      let edge = graph.edges[d][e];
+    for (let e = 0; e < board.graph.edges[d].length; e++) {
+      let edge = board.graph.edges[d][e];
       let x1 = board.coordinates[edge.from].x;
       let y1 = board.coordinates[edge.from].y;
       let x2 = board.coordinates[edge.to].x;
