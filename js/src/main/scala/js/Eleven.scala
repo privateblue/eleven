@@ -21,6 +21,8 @@ object Eleven {
 
   def theEye = Graphs.theEye
 
+  def theCourt = Graphs.theCourt
+
   def start(graph: Graph[Value], players: Int) = Game.start(graph, players)
 
   def move(

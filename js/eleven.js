@@ -120,7 +120,41 @@ const theEye = {
   pointers: false
 }
 
-const boards = [theOriginal, twoByTwo, theEye];
+const theCourt = {
+  r: Math.round(size / 25),
+  get lx () {
+    return cx - (9 * this.r);
+  },
+  get rx () {
+    return cx + (9 * this.r);
+  },
+  get ty () {
+    return cy - (9 * this.r);
+  },
+  get by () {
+    return cy + (9 * this.r);
+  },
+  graph: Eleven.graphToJs(Eleven.theCourt),
+  get coordinates () {
+    let sy = Math.floor((this.by - this.ty) / 4);
+    let slx = Math.floor((this.rx - this.lx) / 2);
+    let ssx = Math.floor((this.rx - this.lx) / 3);
+    let points = [];
+    for (let y = this.ty; y <= this.by; y = y + sy)
+      for (let x = this.lx; x <= this.rx; x = x + (((y - this.ty) / sy) % 2 == 1 ? ssx : slx))
+        points.push({x: x, y: y});
+    return points;
+  },
+  directions: [
+    {key: 39, symbol: '→', horizontal: true},
+    {key: 37, symbol: '←', horizontal: true},
+    {key: 40, symbol: '↓', horizontal: false},
+    {key: 38, symbol: '↑', horizontal: false},
+  ],
+  pointers: false
+}
+
+const boards = [theOriginal, twoByTwo, theCourt];
 const colors = [[81,134,198], [229,87,16], [190,255,117]];
 const names = ['blue', 'red', 'green']
 
