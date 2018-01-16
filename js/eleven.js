@@ -187,15 +187,16 @@ let nodes;
 let arrows;
 let scrs = [];
 let players = 0;
-let machines = [];
+let machines;
 let msg;
 
 let stored = localStorage.getItem('game');
-if (stored) resume(stored)
+if (stored !== null) resume(stored)
 else configure();
 
 function configure() {
   board = theOriginal;
+  machines = [];
   initBoard();
   addPlayer();
   scoreLayer.draw();
@@ -204,6 +205,7 @@ function configure() {
 
 function start() {
   localStorage.setItem('board', JSON.stringify(board));
+  localStorage.setItem('machines', JSON.stringify(machines));
   initBoard();
   initMsg();
   initPlayControls();
@@ -211,10 +213,13 @@ function start() {
   move(start);
 }
 
-function resume(stored) {
-  let game = JSON.parse(stored);
-  board = JSON.parse(localStorage.getItem('board'));
+function resume(storedGame) {
+  let game = JSON.parse(storedGame);
+  let storedBoard = JSON.parse(localStorage.getItem('board'));
+  board = storedBoard !== null ? storedBoard : theOriginal;
   initBoard();
+  let storedMachines = JSON.parse(localStorage.getItem('machines'));
+  machines = storedMachines !== null ? storedMachines : [];
   for (let i = 0; i < game.scores.length; i++) addPlayer();
   initMsg();
   initPlayControls();
@@ -225,7 +230,6 @@ function finish(game, farewell) {
   updateScores(game.scores, game.history, game.history.length % players);
   message(farewell);
   localStorage.removeItem('game');
-  localStorage.removeItem('board');
 }
 
 function move(gm) {
@@ -424,13 +428,13 @@ function initConfigControls() {
   let previousB = new Konva.Text({
     x: board.r,
     y: cy,
-    width: 2 * str,
-    height: 2 * str,
+    width: 2 * fontSize,
+    height: 2 * fontSize,
     align: 'center',
-    text: '↶',
+    text: '↩',
     fontFamily: 'Dosis',
     fontStyle: 'bold',
-    fontSize: 1.2 * fontSize,
+    fontSize: 2 * fontSize,
     fill: 'black'
   });
   controlLayer.add(previousB);
@@ -438,13 +442,13 @@ function initConfigControls() {
   let nextB = new Konva.Text({
     x: width - board.r,
     y: cy,
-    width: 2 * str,
-    height: 2 * str,
+    width: 2 * fontSize,
+    height: 2 * fontSize,
     align: 'center',
-    text: '↷',
+    text: '↪',
     fontFamily: 'Dosis',
     fontStyle: 'bold',
-    fontSize: 1.2 * fontSize,
+    fontSize: 2 * fontSize,
     fill: 'black'
   });
   controlLayer.add(nextB);
