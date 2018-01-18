@@ -6,29 +6,29 @@ object Graph {
 
 case class Graph[V](
   values: IndexedSeq[V],
-  edges: IndexedSeq[Set[(Index, Index)]]
+  dirs: IndexedSeq[DAG]
 ) {
   lazy val indices: IndexedSeq[Index] =
     0 until values.size map Index.apply toIndexedSeq
 
   lazy val directions: IndexedSeq[Direction] =
-    0 until edges.size map Direction.apply toIndexedSeq
+    0 until dirs.size map Direction.apply toIndexedSeq
 
   def add(dag: DAG): Graph[V] =
-    Graph(values, edges :+ dag.take(values.size).edges)
+    Graph(values, dirs :+ dag.take(values.size))
 
   def update(vs: IndexedSeq[V]): Graph[V] =
-    Graph(vs ++ values.drop(vs.size), edges)
+    Graph(vs ++ values.drop(vs.size), dirs)
 
   def direction(dir: Direction): DAG =
-    DAG(values.size, edges(dir.d))
+    dirs(dir.d)
 
   def at(index: Index): V =
     values(index.i)
 
   def set(index: Index, value: V): Graph[V] =
-    Graph(values.updated(index.i, value), edges)
+    Graph(values.updated(index.i, value), dirs)
 
   def fill[W](v: W): Graph[W] =
-    Graph(IndexedSeq.fill(values.size)(v), edges)
+    Graph(IndexedSeq.fill(values.size)(v), dirs)
 }

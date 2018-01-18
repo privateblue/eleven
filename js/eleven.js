@@ -659,10 +659,10 @@ function initBoard() {
     nodes.push({node: node, disk: disk, label: label});
   });
   // arrows
-  for (let d = 0; d < board.graph.edges.length; d++) {
+  for (let d = 0; d < board.graph.dirs.length; d++) {
     let dir = [];
-    for (let e = 0; e < board.graph.edges[d].length; e++) {
-      let edge = board.graph.edges[d][e];
+    for (let e = 0; e < board.graph.dirs[d].edges.length; e++) {
+      let edge = board.graph.dirs[d].edges[e];
       let x1 = board.coordinates[edge.from].x;
       let y1 = board.coordinates[edge.from].y;
       let x2 = board.coordinates[edge.to].x;

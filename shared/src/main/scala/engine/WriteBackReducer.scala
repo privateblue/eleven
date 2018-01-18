@@ -75,6 +75,6 @@ object WriteBackReducer extends MapAccumulator with NonEmptyValueSearch {
     val blank = empty(graph.values.size)
     val reduced = dag.tips.map { r => reduce0(r, blank, IndexedSeq.empty, 0) }
     val combined = combine(blank, reduced)
-    (Graph(combined.values, graph.edges), combined.score)
+    (Graph(combined.values, graph.dirs), combined.score)
   }
 }

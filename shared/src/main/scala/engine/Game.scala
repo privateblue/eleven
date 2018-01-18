@@ -109,7 +109,7 @@ object Game {
         }
         val put = if (empties.nonEmpty) empties else List(None -> graph)
         val children = put.flatMap { case (e, gp) =>
-          val reds = 0.until(gp.edges.size).toList.flatMap { dir =>
+          val reds = 0.until(gp.dirs.size).toList.flatMap { dir =>
             val d = Direction(dir)
             val (gr, scored) = WriteBackReducer.reduce(color, d, gp)
             if (gr.values == gp.values) List()
