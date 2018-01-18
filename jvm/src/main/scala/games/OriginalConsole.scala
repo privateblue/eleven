@@ -88,7 +88,7 @@ object OriginalConsole {
   def board(graph: Graph[Value]): String =
     graph.values
       .map {
-        case Value(v, Some(Color(c))) => s"${colors(c)}$v${Console.RESET}"
+        case Value(v, Some(c)) => s"${colors(c.c)}$v${Console.RESET}"
         case Value(v, _) => s"$v"
       }
       .sliding(4, 4).map(_.mkString(" ")) // original
