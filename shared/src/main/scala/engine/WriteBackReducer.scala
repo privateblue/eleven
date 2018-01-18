@@ -14,7 +14,7 @@ trait MapAccumulator {
   def set(out: Out, i: Index, v: Value): Out =
     Out(out.values.updated(i.i, v), out.score)
   def add(out1: Out, out2: Out): Out = Out(
-    out1.values.zip(out2.values).map { case (v1, v2) => Value.ordering.max(v1, v2) },
+    0.until(out1.values.size).map(i => Value.ordering.max(out1.values(i), out2.values(i))),
     out1.score + out2.score
   )
   def combine(zero: Out, outs: IndexedSeq[Out]): Out =
