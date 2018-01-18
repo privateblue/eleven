@@ -16,9 +16,15 @@ abstract class JsHistoryEntry extends js.Object {
 }
 
 @ScalaJSDefined
+abstract class JsDAG extends js.Object {
+  val size: Int
+  val edges: js.Array[JsEdge]
+}
+
+@ScalaJSDefined
 abstract class JsGraph[T] extends js.Object {
   val values: js.Array[T]
-  val edges: js.Array[js.Array[JsEdge]]
+  val dirs: js.Array[JsDAG]
 }
 
 @ScalaJSDefined

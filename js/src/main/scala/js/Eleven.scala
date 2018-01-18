@@ -94,14 +94,24 @@ object Eleven {
   def scoresOf(scores: js.Array[Int]) =
     scores.toIndexedSeq.map(scoreOf)
 
+  def dagToJs(dag: DAG) = new JsDAG {
+    val size = dag.size
+    val edges = dag.edges.map(edgeToJs).toJSArray
+  }
+
+  def dagOf(dag: JsDAG) = DAG(
+    size = dag.size,
+    edges = dag.edges.toIndexedSeq.map(edgeOf)
+  )
+
   def graphToJs(graph: Graph[Value]) = new JsGraph[JsValue] {
     val values = graph.values.map(valueToJs).toJSArray
-    val edges = graph.edges.map(_.map(edgeToJs).toJSArray).toJSArray
+    val dirs = graph.dirs.map(dagToJs).toJSArray
   }
 
   def graphOf(graph: JsGraph[JsValue]) = Graph(
     values = graph.values.toIndexedSeq.map(valueOf),
-    edges = graph.edges.toIndexedSeq.map(_.toSet.map(edgeOf))
+    dirs = graph.dirs.toIndexedSeq.map(dagOf)
   )
 
   def colorToJs(c: Color) = c.c

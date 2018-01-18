@@ -14,10 +14,10 @@ trait MapAccumulator {
   def set(out: Out, i: Index, v: Value): Out =
     Out(out.values.updated(i.i, v), out.score)
   def add(out1: Out, out2: Out): Out = Out(
-    out1.values.zip(out2.values).map { case (v1, v2) => Value.ordering.max(v1, v2) },
+    0.until(out1.values.size).map(i => Value.ordering.max(out1.values(i), out2.values(i))),
     out1.score + out2.score
   )
-  def combine(zero: Out, outs: Set[Out]): Out =
+  def combine(zero: Out, outs: IndexedSeq[Out]): Out =
     outs.foldLeft(zero)(add)
 }
 
@@ -27,14 +27,16 @@ trait NonEmptyValueSearch {
     dir: DAG,
     graph: Graph[Value],
     index: Index
-  ): Set[Value] =
-    dir.from(index).map {
-      case i if graph.at(i) == Value.empty =>
+  ): IndexedSeq[Value] =
+    dir.from(index).foldLeft(IndexedSeq.empty[Value]) {
+      case (vs, i) if graph.at(i) == Value.empty =>
         val cvs = values(col, dir, graph, i)
-        if (cvs.size == 1) cvs.head else Value.empty
-      case i if graph.at(i).c == Some(col) => graph.at(i)
-      case i => Value.empty
-    }.filterNot(_ == Value.empty)
+        if (cvs.size == 1 && !vs.contains(cvs.head)) vs :+ cvs.head else vs
+      case (vs, i) if graph.at(i).c == Some(col) && !vs.contains(graph.at(i)) =>
+        vs :+ graph.at(i)
+      case (vs, i) =>
+        vs
+    }
 }
 
 object WriteBackReducer extends MapAccumulator with NonEmptyValueSearch {
@@ -75,6 +77,6 @@ object WriteBackReducer extends MapAccumulator with NonEmptyValueSearch {
     val blank = empty(graph.values.size)
     val reduced = dag.tips.map { r => reduce0(r, blank, IndexedSeq.empty, 0) }
     val combined = combine(blank, reduced)
-    (Graph(combined.values, graph.edges), combined.score)
+    (Graph(combined.values, graph.dirs), combined.score)
   }
 }

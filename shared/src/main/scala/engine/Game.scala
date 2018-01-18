@@ -76,7 +76,7 @@ object Game {
 
   def bestMove(state: Continued): Game.HistoryEntry = {
     val players = state.scores.size
-    val maxDepth = 1 + math.round(math.sqrt(state.graph.values.size) / math.sqrt(math.max(1, empties(state.graph).size)))
+    val maxDepth = 2 + math.round(math.sqrt(state.graph.values.size) / math.sqrt(math.max(1, empties(state.graph).size)))
     val noempty = Option.empty[Index]
     val nodir = Option.empty[Direction]
     val initscores = Vector.fill(players)(Double.MinValue)
@@ -109,7 +109,7 @@ object Game {
         }
         val put = if (empties.nonEmpty) empties else List(None -> graph)
         val children = put.flatMap { case (e, gp) =>
-          val reds = 0.until(gp.edges.size).toList.flatMap { dir =>
+          val reds = 0.until(gp.dirs.size).toList.flatMap { dir =>
             val d = Direction(dir)
             val (gr, scored) = WriteBackReducer.reduce(color, d, gp)
             if (gr.values == gp.values) List()
