@@ -76,7 +76,7 @@ object Game {
 
   def bestMove(state: Continued): Game.HistoryEntry = {
     val players = state.scores.size
-    val maxDepth = 1 + math.round(math.sqrt(state.graph.values.size) / math.sqrt(math.max(1, empties(state.graph).size)))
+    val maxDepth = 2 + math.round(math.sqrt(state.graph.values.size) / math.sqrt(math.max(1, empties(state.graph).size)))
     val noempty = Option.empty[Index]
     val nodir = Option.empty[Direction]
     val initscores = Vector.fill(players)(Double.MinValue)

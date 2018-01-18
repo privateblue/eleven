@@ -101,7 +101,7 @@ object Eleven {
 
   def dagOf(dag: JsDAG) = DAG(
     size = dag.size,
-    edges = dag.edges.toSet.map(edgeOf)
+    edges = dag.edges.toIndexedSeq.map(edgeOf)
   )
 
   def graphToJs(graph: Graph[Value]) = new JsGraph[JsValue] {
