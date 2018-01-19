@@ -80,8 +80,10 @@ object Game {
     val noempty = Option.empty[Index]
     val nodir = Option.empty[Direction]
     val initscores = Vector.fill(players)(Double.MinValue)
-    def zerosum(scores: Vector[Double]): Vector[Double] =
-      scores.map(_ - scores.sum / scores.size)
+    def zerosum(scores: Vector[Double]): Vector[Double] = {
+      val avg = scores.sum / scores.size
+      scores.map(_ - avg)
+    }
     def hypermax(
       player: Int,
       graph: Graph[Value],
@@ -114,7 +116,7 @@ object Game {
             val (gr, scored) = WriteBackReducer.reduce(color, d, gp)
             if (gr.values == gp.values) List()
             else {
-              val added = scores.updated(player, scored.s.toDouble)
+              val added = scores.updated(player, scores(player) + scored.s.toDouble)
               List((e, Some(d), gr, added))
             }
           }
