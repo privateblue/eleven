@@ -2,7 +2,7 @@ package engine
 
 import graph._
 
-trait MapAccumulator {
+trait Accumulator {
   case class Out(values: IndexedSeq[Value], score: Score) {
     def scored(sc: Score): Out = Out(values, score + sc)
   }
@@ -39,7 +39,7 @@ trait NonEmptyValueSearch {
     }
 }
 
-object WriteBackReducer extends MapAccumulator with NonEmptyValueSearch {
+object WriteBackReducer extends Accumulator with NonEmptyValueSearch {
   def reduce(col: Color, dir: Direction, graph: Graph[Value]): (Graph[Value], Score) = {
     val dag = graph.direction(dir)
     def reduce0(i: Index, out: Out, path: IndexedSeq[Index], focus: Int): Out = {
