@@ -4,15 +4,12 @@ object Graph {
   def empty[V] = Graph(IndexedSeq.empty[V], IndexedSeq.empty)
 }
 
-case class Graph[V](
-  values: IndexedSeq[V],
-  dirs: IndexedSeq[DAG]
-) {
+case class Graph[V](values: IndexedSeq[V], dirs: IndexedSeq[DAG]) {
   lazy val indices: IndexedSeq[Index] =
-    0 until values.size map Index.apply toIndexedSeq
+    values.indices.map(Index.apply)
 
   lazy val directions: IndexedSeq[Direction] =
-    0 until dirs.size map Direction.apply toIndexedSeq
+    dirs.indices.map(Direction.apply)
 
   def add(dag: DAG): Graph[V] =
     Graph(values, dirs :+ dag.take(values.size))
