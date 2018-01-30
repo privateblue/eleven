@@ -31,11 +31,17 @@ case class DAG(size: Int, edges: IndexedSeq[(Index, Index)]) {
   def inverted: DAG =
     DAG(size, edges.map(e => (e._2, e._1)))
 
-  def from(index: Index): IndexedSeq[Index] =
+  def sourcesOf(index: Index): IndexedSeq[Index] =
     sources(index.i)
 
-  def to(index: Index): IndexedSeq[Index] =
+  def before(index: Index): IndexedSeq[Index] =
+    sourcesOf(index) ++ sourcesOf(index).flatMap(before)
+
+  def targetsOf(index: Index): IndexedSeq[Index] =
     targets(index.i)
+
+  def after(index: Index): IndexedSeq[Index] =
+    targetsOf(index) ++ targetsOf(index).flatMap(after)
 
   def take(n: Int): DAG =
     DAG(n, edges.filterNot(e => e._1.i >= n || e._2.i >= n))

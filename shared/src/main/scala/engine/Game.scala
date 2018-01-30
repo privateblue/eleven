@@ -35,7 +35,7 @@ object Game {
   type ResultHandler = (HistoryEntry, Graph[Value], IndexedSeq[Score]) => Future[Unit]
 
   def start(graph: Graph[Value], players: Int): Game =
-    Continued(graph, List.empty, IndexedSeq.fill(players)(Score(0)))
+    Continued(graph, List.empty, IndexedSeq.fill(players)(Score.Zero))
 
   def move(
     state: Continued,
@@ -56,7 +56,7 @@ object Game {
       dir <- if (!reds.isEmpty) directionPicker(put, reds).map(Option.apply)
              else Future.successful(None)
       entry = (e, dir)
-      (reduced, score) = dir.map(WriteBackReducer.reduce(color, _, put)).getOrElse((put, Score(0)))
+      (reduced, score) = dir.map(WriteBackReducer.reduce(color, _, put)).getOrElse((put, Score.Zero))
       added = updatedScores(state.scores, next, score)
       _ <- resultHandler(entry, reduced, added)
       elevs = elevens(reduced)
@@ -76,7 +76,7 @@ object Game {
 
   def bestMove(state: Continued): Game.HistoryEntry = {
     val players = state.scores.size
-    val maxDepth = 2 + math.round(math.sqrt(state.graph.values.size) / math.sqrt(math.max(1, empties(state.graph).size)))
+    val maxDepth = 2 + math.floor(math.sqrt(2.5 * state.graph.values.size) / math.sqrt(math.max(1, empties(state.graph).size)))
     val noempty = Option.empty[Index]
     val nodir = Option.empty[Direction]
     val initscores = Vector.fill(players)(Double.MinValue)
