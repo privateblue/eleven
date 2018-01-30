@@ -35,7 +35,7 @@ object Game {
   type ResultHandler = (HistoryEntry, Graph[Value], IndexedSeq[Score]) => Future[Unit]
 
   def start(graph: Graph[Value], players: Int): Game =
-    Continued(graph, List.empty, IndexedSeq.fill(players)(Score(0)))
+    Continued(graph, List.empty, IndexedSeq.fill(players)(Score.Zero))
 
   def move(
     state: Continued,
@@ -56,7 +56,7 @@ object Game {
       dir <- if (!reds.isEmpty) directionPicker(put, reds).map(Option.apply)
              else Future.successful(None)
       entry = (e, dir)
-      (reduced, score) = dir.map(WriteBackReducer.reduce(color, _, put)).getOrElse((put, Score(0)))
+      (reduced, score) = dir.map(WriteBackReducer.reduce(color, _, put)).getOrElse((put, Score.Zero))
       added = updatedScores(state.scores, next, score)
       _ <- resultHandler(entry, reduced, added)
       elevs = elevens(reduced)
