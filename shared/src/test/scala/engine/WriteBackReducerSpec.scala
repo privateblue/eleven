@@ -7,6 +7,7 @@ import org.scalatest._
 class WriteBackReducerSpec extends FlatSpec with Matchers {
   val c1 = Color(0)
   val c2 = Color(1)
+  val c3 = Color(2)
   val d1 = Direction(0)
 
   val _0 = Value.empty
@@ -150,7 +151,7 @@ class WriteBackReducerSpec extends FlatSpec with Matchers {
 
   //     0                0
   //   /   \            /   \
-  // 1 - 0 - 1  ===>  0 - 0 - 2
+  // 1*- 0 - 1  ===>  0 - 0 - 2*
   //   \   /            \   /
   //     0                0
 
@@ -163,7 +164,26 @@ class WriteBackReducerSpec extends FlatSpec with Matchers {
   val values7a = IndexedSeq(_1.paint(c2),_0,_0,_0,_1)
   val values7b = IndexedSeq(_0          ,_0,_0,_0,_2.paint(c2))
 
-  "WriteBackReducer" should "reduce multiplayer branch-and-merge steal correctly" in {
+  "WriteBackReducer" should "reduce multiplayer branch-and-merge steal correctly 1" in {
     testSingleDirection(dag7, values7a, values7b, _2.toScore, c2)
+  }
+
+  //     0                0
+  //   /   \            /   \
+  // 1*-(2)- 1  ===>  1*-(2)- 1
+  //   \   /            \   /
+  //     0                0
+
+  val dag8 = DAG.empty
+    .add()      // 0
+    .add(0)     // 1
+    .add(0)     // 2
+    .add(0)     // 3
+    .add(1,2,3) // 4
+  val values8a = IndexedSeq(_1.paint(c2),_0,_2.paint(c3),_0,_1)
+  val values8b = IndexedSeq(_1.paint(c2),_0,_2.paint(c3),_0,_1)
+
+  "WriteBackReducer" should "reduce multiplayer branch-and-merge steal correctly 2" in {
+    testSingleDirection(dag8, values8a, values8b, Score.Zero, c2)
   }
 }

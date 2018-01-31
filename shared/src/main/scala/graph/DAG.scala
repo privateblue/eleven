@@ -43,6 +43,9 @@ case class DAG(size: Int, edges: IndexedSeq[(Index, Index)]) {
   def after(index: Index): IndexedSeq[Index] =
     targetsOf(index) ++ targetsOf(index).flatMap(after)
 
+  def reachable(from: Index, to: Index): Boolean =
+    from == to || after(from).contains(to)
+
   def take(n: Int): DAG =
     DAG(n, edges.filterNot(e => e._1.i >= n || e._2.i >= n))
 }
