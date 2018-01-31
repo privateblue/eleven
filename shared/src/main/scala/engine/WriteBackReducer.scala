@@ -15,30 +15,6 @@ case class Acc(
   moves: IndexedSeq[List[Index]],
   score: Score
 ) {
-  def move(dag: DAG, from: Index, to: Index, v: Value, s: Score): Acc = {
-    val tos = moves(from.i)
-    if (tos.contains(to) || tos.exists(dag.after(_).contains(to))) this
-    else {
-      val cmove = Acc(
-        values = values.updated(to.i, v),
-        moves = moves.updated(from.i, to :: tos),
-        score = score + s
-      )
-      tos.filter(dag.after(to).contains).foldLeft(cmove) {
-        case (a, t) if (moves.filter(_.contains(t)).size > 1) => Acc(
-          values = a.values.updated(t.i, a.get(t).previous),
-          moves = a.moves.updated(from.i, a.moves(from.i).filterNot(_ == t)),
-          score = a.score - a.get(t).toScore
-        )
-        case (a, t) => Acc (
-          values = a.values.updated(t.i, Value.empty),
-          moves = a.moves.updated(from.i, a.moves(from.i).filterNot(_ == t)),
-          score = a.score
-        )
-      }
-    }
-  }
-
   def froms(i: Index): IndexedSeq[Index] =
     moves.zipWithIndex.collect {
       case (ts, f) if ts.contains(i) => Index(f)
@@ -62,6 +38,37 @@ object WriteBackReducer {
           vs
       }
 
+    def move(acc: Acc, from: Index, to: Index): Acc = {
+      val v = graph.at(from)
+      val tos = acc.moves(from.i)
+      if (tos.contains(to) || tos.exists(dag.reachable(_, to))) acc
+      else {
+        val (cv, cs) =
+          if (acc.values(to.i).v == v.v) (v.next, v.next.toScore)
+          else (v, Score.Zero)
+        val cmove = Acc(
+          values = acc.values.updated(to.i, cv),
+          moves = acc.moves.updated(from.i, to :: tos),
+          score = acc.score + cs
+        )
+        tos.filter(dag.reachable(to, _)).foldLeft(cmove) { (a, t) =>
+          val tfroms = acc.moves.filter(_.contains(t))
+          val (uv, us) =
+            if (tfroms.size > 1 && a.moves(t.i).contains(t))
+              (a.get(t).previous.paint(graph.at(t).c.get), a.get(t).toScore)
+            else if (tfroms.size > 1)
+              (a.get(t).previous, a.get(t).toScore)
+            else
+              (Value.empty, Score.Zero)
+          Acc(
+            values = a.values.updated(t.i, uv),
+            moves = a.moves.updated(from.i, a.moves(from.i).filterNot(_ == t)),
+            score = a.score - us
+          )
+        }
+      }
+    }
+
     def reduce0(i: Index, acc: Acc, path: IndexedSeq[Index], focus: Int): Acc = {
       val v = graph.at(i)
       val p = path :+ i
@@ -73,20 +80,26 @@ object WriteBackReducer {
       val stay = if (mergeb) p.size else f
       val step = if (mergeb) p.size else f + 1
       if (ffroms.contains(i)) { // PRUNE
+        //println(s"$i PRUNE $p $focused $ffroms $acc")
         acc
       } else if (v == Value.empty) { // SKIP
+        //println(s"$i SKIP $p $focused $ffroms $acc")
         dag.sourcesOf(i).foldLeft(acc)((a, c) => reduce0(c, a, p, stay))
       } else if (ffroms.isEmpty) { // INSERT
-        val updated = acc.move(dag, i, focused, v, Score.Zero)
+        val updated = move(acc, i, focused)
+        //println(s"$i INSERT $p $focused $ffroms $updated")
         dag.sourcesOf(i).foldLeft(updated)((a, c) => reduce0(c, a, p, stay))
       } else if (!ffroms.forall(p.contains)) { // IGNORE
+        //println(s"$i IGNORE $p $focused $ffroms $acc")
         dag.sourcesOf(i).foldLeft(acc)((a, c) => reduce0(c, a, p, step))
       } else if (fv.v == v.v) { // MERGE
-        val updated = acc.move(dag, i, focused, v.next.paint(col), v.next.toScore)
+        val updated = move(acc, i, focused)
+        //println(s"$i MERGE $p $focused $ffroms $updated")
         dag.sourcesOf(i).foldLeft(updated)((a, c) => reduce0(c, a, p, step))
       } else { // STACK
         val focused2 = if (p.isDefinedAt(f + 1)) p(f + 1) else i
-        val updated = acc.move(dag, i, focused2, v, Score.Zero)
+        val updated = move(acc, i, focused2)
+        //println(s"$i STACK $p $focused $ffroms $updated")
         dag.sourcesOf(i).foldLeft(updated)((a, c) => reduce0(c, a, p, step))
       }
     }
